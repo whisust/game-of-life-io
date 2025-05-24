@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game of Life Multiplayer</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        #gameCanvas {
+            border: 2px solid #333;
+            cursor: crosshair;
+            display: block;
+            margin: 20px auto;
+            background-color: #000;
+            image-rendering: pixelated; /* Pour un rendu net des pixels */
+        }
+
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        button {
+            margin: 5px;
+            padding: 12px 16px;
+            border: 2px solid #007acc;
+            background-color: white;
+            color: #007acc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #007acc;
+            color: white;
+        }
+
+        .info {
+            margin: 10px 0;
+            text-align: center;
+            font-size: 16px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #status {
+            font-weight: bold;
+        }
+
+        .instructions {
+            margin: 20px auto;
+            max-width: 600px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+
+        .pattern-info {
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<h1>🧬 Game of Life Multijoueur</h1>
+
+<div class="info">
+    <span id="status">Déconnecté</span> |
+    Génération: <span id="generation">0</span> |
+    Joueurs: <span id="players">0</span>
+</div>
+
+<div class="controls">
+    <button onclick="selectPattern('glider')" title="Raccourci: 1">
+        🚀 Glider
+    </button>
+    <button onclick="selectPattern('oscillator')" title="Raccourci: 2">
+        ⚡ Oscillateur
+    </button>
+    <button onclick="selectPattern('spaceship')" title="Raccourci: 3">
+        🛸 Vaisseau
+    </button>
+    <button onclick="selectPattern('block')" title="Raccourci: 4">
+        ⬜ Block
+    </button>
+    <div class="pattern-info">
+        Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>
+    </div>
+</div>
+
+<canvas id="gameCanvas" width="512" height="512"></canvas>
+
+<div class="instructions">
+    <h3>🎮 Comment jouer</h3>
+    <ul>
+        <li><strong>Cliquez</strong> sur la grille pour placer le pattern sélectionné</li>
+        <li><strong>Touches 1-4</strong> pour changer rapidement de pattern</li>
+        <li><strong>Glider</strong> : Se déplace en diagonal</li>
+        <li><strong>Oscillateur</strong> : Alterne entre états</li>
+        <li><strong>Vaisseau</strong> : Se déplace horizontalement</li>
+        <li><strong>Block</strong> : Reste stable</li>
+    </ul>
+    <p><em>Le jeu évolue automatiquement toutes les 250ms selon les règles du Jeu de la Vie de Conway.</em></p>
+</div>
+
+<script>
+    class GameOfLifeClient {
+        constructor() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.ws = null;
+            this.playerId = null;
+            this.selectedPattern = 'glider';
+            this.gridSize = 512;
+            this.cellSize = 1; // 1 pixel par cellule pour du 512x512
+            this.gameState = null;
+            this.isConnected = false;
+
+            this.setupCanvas();
+            this.setupEventListeners();
+            this.connect();
+        }
+
+        setupCanvas() {
+            // Ajuster la taille d'affichage pour une meilleure visibilité
+            this.canvas.style.width = '512px';
+            this.canvas.style.height = '512px';
+            this.canvas.width = 512;
+            this.canvas.height = 512;
+
+            // Canvas noir par défaut
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, 512, 512);
+        }
+
+        setupEventListeners() {
+            this.canvas.addEventListener('click', (e) => {
+                if (!this.isConnected || !this.playerId) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) * (this.gridSize / this.canvas.clientWidth));
+                const y = Math.floor((e.clientY - rect.top) * (this.gridSize / this.canvas.clientHeight));
+
+                this.placePattern(x, y);
+            });
+
+            // Empêcher le menu contextuel sur clic droit
+            this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            this.ws = new WebSocket(wsUrl);
+
+            this.ws.onopen = () => {
+                console.log('Connexion WebSocket ouverte');
+                this.updateStatus('Connexion...');
+
+                // Rejoindre le jeu
+                const playerName = prompt('Entrez votre nom:') || 'Anonyme';
+                this.ws.send(JSON.stringify({
+                    type: 'join',
+                    name: playerName
+                }));
+            };
+
+            this.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.handleMessage(data);
+            };
+
+            this.ws.onclose = () => {
+                console.log('Connexion WebSocket fermée');
+                this.isConnected = false;
+                this.updateStatus('Déconnecté');
+
+                // Tentative de reconnexion après 3 secondes
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        console.log('Tentative de reconnexion...');
+                        this.connect();
+                    }
+                }, 3000);
+            };
+
+            this.ws.onerror = (error) => {
+                console.error('Erreur WebSocket:', error);
+                this.updateStatus('Erreur de connexion');
+            };
+        }
+
+        handleMessage(data) {
+            switch (data.type) {
+                case 'joined':
+                    this.playerId = data.player_id;
+                    this.isConnected = true;
+                    this.updateStatus('Connecté');
+                    console.log('Rejoint le jeu:', data.message);
+                    break;
+
+                case 'game_state':
+                    this.gameState = data;
+                    this.render();
+                    this.updateUI();
+                    break;
+
+                default:
+                    console.log('Message non géré:', data);
+            }
+        }
+
+        placePattern(x, y) {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'place_pattern',
+                pattern: this.selectedPattern,
+                x: x,
+                y: y
+            }));
+        }
+
+        render() {
+            if (!this.gameState) return;
+
+            const imageData = this.ctx.createImageData(512, 512);
+            const data = imageData.data;
+
+            // Remplir pixel par pixel
+            for (let y = 0; y < this.gridSize; y++) {
+                for (let x = 0; x < this.gridSize; x++) {
+                    const index = (y * 512 + x) * 4;
+                    const isAlive = this.gameState.grid[y][x];
+
+                    if (isAlive) {
+                        // Cellule vivante = blanc
+                        data[index] = 255;     // R
+                        data[index + 1] = 255; // G
+                        data[index + 2] = 255; // B
+                        data[index + 3] = 255; // A
+                    } else {
+                        // Cellule morte = noir
+                        data[index] = 0;       // R
+                        data[index + 1] = 0;   // G
+                        data[index + 2] = 0;   // B
+                        data[index + 3] = 255; // A
+                    }
+                }
+            }
+
+            this.ctx.putImageData(imageData, 0, 0);
+        }
+
+        updateUI() {
+            if (!this.gameState) return;
+
+            document.getElementById('generation').textContent = this.gameState.generation;
+            document.getElementById('players').textContent = this.gameState.players_count;
+        }
+
+        updateStatus(status) {
+            document.getElementById('status').textContent = status;
+
+            // Couleur selon le statut
+            const statusEl = document.getElementById('status');
+            statusEl.style.color = this.isConnected ? '#00aa00' : '#aa0000';
+        }
+
+        selectPattern(pattern) {
+            this.selectedPattern = pattern;
+            document.getElementById('selectedPattern').textContent = pattern;
+
+            // Mise à jour visuelle des boutons
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.style.backgroundColor = '';
+                btn.style.fontWeight = '';
+            });
+
+            event.target.style.backgroundColor = '#007acc';
+            event.target.style.fontWeight = 'bold';
+            event.target.style.color = 'white';
+        }
+    }
+
+    // Fonction globale pour la sélection de pattern
+    function selectPattern(pattern) {
+        if (window.gameClient) {
+            window.gameClient.selectPattern(pattern);
+        }
+    }
+
+    // Initialiser le client au chargement de la page
+    window.addEventListener('DOMContentLoaded', () => {
+        window.gameClient = new GameOfLifeClient();
+
+        // Sélectionner le premier pattern par défaut
+        setTimeout(() => {
+            document.querySelector('.controls button').click();
+        }, 100);
+    });
+
+    // Gestion des raccourcis clavier
+    document.addEventListener('keydown', (e) => {
+        if (!window.gameClient) return;
+
+        switch(e.key) {
+            case '1':
+                selectPattern('glider');
+                break;
+            case '2':
+                selectPattern('oscillator');
+                break;
+            case '3':
+                selectPattern('spaceship');
+                break;
+            case '4':
+                selectPattern('block');
+                break;
+        }
+    });
+</script>
+</body>
+</html>
