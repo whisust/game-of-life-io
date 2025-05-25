@@ -1,11 +1,11 @@
 import logging
-import os
-import numpy as np
-from typing import Dict, List, Set, Optional
+import time
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-import time
+from typing import List, Optional
+
+import numpy as np
 from scipy import ndimage
 
 logger = logging.getLogger("gameoflife")
