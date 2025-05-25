@@ -7,7 +7,7 @@ CONFIG = {
     'PORT': int(os.getenv('PORT', 8000)),
     'HOST': os.getenv('HOST', "0.0.0.0"),
     'MAX_PLAYERS': int(os.getenv('MAX_PLAYERS', 50)),
-    'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 250)),
+    'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 100)),
     'GRID_SIZE': 256,
     'ADMIN_NAME': os.getenv('ADMIN_NAME', "Tony"),
 }

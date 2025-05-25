@@ -174,6 +174,12 @@
         <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
             ⬜ Block
         </button>
+        <button class="pattern-btn" onclick="selectPattern('pulsar')" title="Raccourci: 5">
+            💫 Pulsar
+        </button>
+        <button class="pattern-btn" onclick="selectPattern('glider_gun')" title="Raccourci: 6">
+            🔫 Glider Gun
+        </button>
     </div>
     <div class="orientation-controls">
         <label>Orientation:</label>
@@ -203,12 +209,14 @@
     <h3>🎮 Comment jouer</h3>
     <ul>
         <li><strong>Cliquez</strong> sur la grille pour placer le pattern sélectionné</li>
-        <li><strong>Touches 1-4</strong> pour changer rapidement de pattern</li>
+        <li><strong>Touches 1-6</strong> pour changer rapidement de pattern</li>
         <li><strong>Touches flèches</strong> (↑, →, ↓, ←) pour changer l'orientation du pattern</li>
         <li><strong>Glider</strong> : Se déplace en diagonal</li>
         <li><strong>Oscillateur</strong> : Alterne entre états</li>
         <li><strong>Vaisseau</strong> : Se déplace horizontalement</li>
         <li><strong>Block</strong> : Reste stable</li>
+        <li><strong>Pulsar</strong> : Oscillateur complexe de période 3</li>
+        <li><strong>Glider Gun</strong> : Génère des gliders périodiquement</li>
     </ul>
     <p><em>Le jeu évolue automatiquement toutes les 250ms selon les règles du Jeu de la Vie de Conway.</em></p>
 </div>
@@ -659,6 +667,12 @@
                 break;
             case '4':
                 selectPattern('block');
+                break;
+            case '5':
+                selectPattern('pulsar');
+                break;
+            case '6':
+                selectPattern('glider_gun');
                 break;
 
             // Orientation selection with arrow keys
