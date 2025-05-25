@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import numpy as np
 import pytest
 from fastapi.websockets import WebSocket
-from main import GameState, PlacePatternCommand, PatternType, PATTERNS, GRID_SIZE
+from main import GameState, PlacePatternCommand, PatternType, Orientation, PATTERNS, GRID_SIZE
 
 
 @pytest.fixture
@@ -84,6 +84,39 @@ def test_place_pattern_out_of_bounds(game_state):
     success = game_state.place_pattern(pattern_type, x, y)
 
     assert not success
+
+def test_place_pattern_with_orientation(game_state):
+    """Test that patterns are correctly rotated based on orientation."""
+
+    # Test with a glider pattern which has a distinct shape for each orientation
+    pattern_type = PatternType.GLIDER
+    x, y = 10, 10
+
+    # Clear the grid
+    game_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=bool)
+
+    # Place pattern with UP orientation (default)
+    success_up = game_state.place_pattern(pattern_type, x, y, Orientation.UP)
+    assert success_up
+
+    # Get the pattern as placed with UP orientation
+    up_pattern = game_state.grid[y:y+3, x:x+3].copy()
+
+    # Clear the grid
+    game_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=bool)
+
+    # Place pattern with RIGHT orientation
+    success_right = game_state.place_pattern(pattern_type, x, y, Orientation.RIGHT)
+    assert success_right
+
+    # Get the pattern as placed with RIGHT orientation
+    right_pattern = game_state.grid[y:y+3, x:x+3].copy()
+
+    # Verify that the patterns are different (rotated)
+    assert not np.array_equal(up_pattern, right_pattern)
+
+    # Verify that the RIGHT pattern is the UP pattern rotated 270° clockwise
+    assert np.array_equal(right_pattern, np.rot90(up_pattern, k=3))
 
 def test_process_commands(game_state, mock_websocket):
     player_name = "Player1"

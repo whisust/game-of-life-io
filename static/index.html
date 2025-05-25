@@ -123,6 +123,16 @@
     <div class="pattern-info">
         Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>
     </div>
+    <div class="orientation-controls">
+        <label>Orientation:</label>
+        <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️ Haut</button>
+        <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️ Droite</button>
+        <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️ Bas</button>
+        <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️ Gauche</button>
+        <div class="orientation-info">
+            Orientation: <strong><span id="selectedOrientation">up</span></strong>
+        </div>
+    </div>
     <div class="grid-size-controls">
         <label>Taille de la grille:</label>
         <button class="grid-btn" onclick="setGridSize(512)" id="grid512">512x512</button>
@@ -138,6 +148,7 @@
     <ul>
         <li><strong>Cliquez</strong> sur la grille pour placer le pattern sélectionné</li>
         <li><strong>Touches 1-4</strong> pour changer rapidement de pattern</li>
+        <li><strong>Touches flèches</strong> (↑, →, ↓, ←) pour changer l'orientation du pattern</li>
         <li><strong>Glider</strong> : Se déplace en diagonal</li>
         <li><strong>Oscillateur</strong> : Alterne entre états</li>
         <li><strong>Vaisseau</strong> : Se déplace horizontalement</li>
@@ -154,7 +165,8 @@
             this.ws = null;
             this.playerId = null;
             this.selectedPattern = 'glider';
-            this.gridSize = 256; // Default grid size
+            this.selectedOrientation = 'up'; // Default orientation
+            this.gridSize = 128; // Default grid size
             this.canvasSize = 512; // Fixed canvas size
             this.cellSize = this.canvasSize / this.gridSize; // Calculate cell size based on grid size
             this.gameState = null;
@@ -166,6 +178,8 @@
 
             // Highlight default grid size button
             document.getElementById(`grid${this.gridSize}`).classList.add('selected');
+            // Highlight default orientation button
+            document.getElementById('orientUp').classList.add('selected');
         }
 
         setupCanvas() {
@@ -281,9 +295,22 @@
             this.ws.send(JSON.stringify({
                 type: 'place_pattern',
                 pattern: this.selectedPattern,
+                orientation: this.selectedOrientation,
                 x: x,
                 y: y
             }));
+        }
+
+        selectOrientation(orientation) {
+            this.selectedOrientation = orientation;
+            document.getElementById('selectedOrientation').textContent = orientation;
+
+            // Update visual indication of selected orientation
+            document.querySelectorAll('.orientation-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            document.getElementById(`orient${orientation.charAt(0).toUpperCase() + orientation.slice(1)}`).classList.add('selected');
         }
 
         render() {
@@ -352,6 +379,13 @@
         }
     }
 
+    // Fonction globale pour la sélection d'orientation
+    function selectOrientation(orientation) {
+        if (window.gameClient) {
+            window.gameClient.selectOrientation(orientation);
+        }
+    }
+
     // Fonction globale pour changer la taille de la grille
     function setGridSize(size) {
         if (window.gameClient) {
@@ -374,6 +408,7 @@
         if (!window.gameClient) return;
 
         switch(e.key) {
+            // Pattern selection
             case '1':
                 selectPattern('glider');
                 break;
@@ -385,6 +420,24 @@
                 break;
             case '4':
                 selectPattern('block');
+                break;
+
+            // Orientation selection with arrow keys
+            case 'ArrowUp':
+                selectOrientation('up');
+                e.preventDefault(); // Prevent page scrolling
+                break;
+            case 'ArrowRight':
+                selectOrientation('right');
+                e.preventDefault();
+                break;
+            case 'ArrowDown':
+                selectOrientation('down');
+                e.preventDefault();
+                break;
+            case 'ArrowLeft':
+                selectOrientation('left');
+                e.preventDefault();
                 break;
         }
     });

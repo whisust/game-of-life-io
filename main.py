@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("gameoflife")
 
 # Configuration du jeu
-GRID_SIZE = 256
+GRID_SIZE = 128
 TICK_RATE = CONFIG['TICK_RATE_MS']  # ms
 MAX_PLAYERS = CONFIG['MAX_PLAYERS']
 
@@ -48,6 +48,12 @@ class Player:
     color: int  # Pour identifier visuellement les contributions
     last_action: float = 0
 
+class Orientation(Enum):
+    UP = "up"
+    RIGHT = "right"
+    DOWN = "down"
+    LEFT = "left"
+
 @dataclass
 class PlacePatternCommand:
     player_id: str
@@ -55,13 +61,14 @@ class PlacePatternCommand:
     x: int
     y: int
     timestamp: float
+    orientation: Orientation = Orientation.UP
 
 # Patterns prédéfinis du Jeu de la Vie
 PATTERNS = {
     PatternType.GLIDER: np.array([
-        [0, 1, 0],
-        [0, 0, 1],
-        [1, 1, 1]
+        [0, 1, 1],
+        [1, 0, 1],
+        [0, 0, 1]
     ], dtype=bool),
 
     PatternType.OSCILLATOR: np.array([
@@ -69,10 +76,11 @@ PATTERNS = {
     ], dtype=bool),
 
     PatternType.SPACESHIP: np.array([
-        [0, 1, 1, 1, 1],
-        [1, 0, 0, 0, 1],
-        [0, 0, 0, 0, 1],
-        [1, 0, 0, 1, 0]
+        [1, 1, 1, 0],
+        [1, 0, 0, 1],
+        [1, 0, 0, 0],
+        [1, 0, 0, 0],
+        [0, 1, 0, 1]
     ], dtype=bool),
 
     PatternType.BLOCK: np.array([
@@ -112,12 +120,26 @@ class GameState:
         elif player:
             logger.debug(f"Action trop rapide ignorée pour {player.name}")
 
-    def place_pattern(self, pattern_type: PatternType, x: int, y: int) -> bool:
+    def rotate_pattern(self, pattern: np.ndarray, orientation: Orientation) -> np.ndarray:
+        """Rotate a pattern according to the specified orientation."""
+        if orientation == Orientation.UP:
+            return pattern
+        elif orientation == Orientation.RIGHT:
+            return np.rot90(pattern, k=3)  # Rotate 270° clockwise (90° counterclockwise)
+        elif orientation == Orientation.DOWN:
+            return np.rot90(pattern, k=2)  # Rotate 180°
+        elif orientation == Orientation.LEFT:
+            return np.rot90(pattern, k=1)  # Rotate 90° clockwise
+        return pattern  # Default case
+
+    def place_pattern(self, pattern_type: PatternType, x: int, y: int, orientation: Orientation = Orientation.UP) -> bool:
         """Place un pattern sur la grille. Retourne True si succès."""
         if pattern_type not in PATTERNS:
             return False
 
         pattern = PATTERNS[pattern_type]
+        # Rotate the pattern according to the orientation
+        pattern = self.rotate_pattern(pattern, orientation)
         h, w = pattern.shape
 
         # Vérification des limites
@@ -131,7 +153,7 @@ class GameState:
     def process_commands(self):
         """Traite toutes les commandes en attente."""
         for command in self.command_queue:
-            self.place_pattern(command.pattern_type, command.x, command.y)
+            self.place_pattern(command.pattern_type, command.x, command.y, command.orientation)
         self.command_queue.clear()
 
     def next_generation(self):
@@ -272,12 +294,17 @@ async def websocket_endpoint(websocket: WebSocket):
             message = json.loads(data)
 
             if message.get("type") == "place_pattern":
+                # Get orientation from message, default to UP if not provided
+                orientation_str = message.get("orientation", "up")
+                orientation = Orientation(orientation_str)
+
                 command = PlacePatternCommand(
                     player_id=player_id,
                     pattern_type=PatternType(message["pattern"]),
                     x=message["x"],
                     y=message["y"],
-                    timestamp=time.time()
+                    timestamp=time.time(),
+                    orientation=orientation
                 )
                 game_state.add_command(command)
 
