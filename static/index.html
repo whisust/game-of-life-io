@@ -139,6 +139,9 @@
         <button class="grid-btn" onclick="setGridSize(256)" id="grid256">256x256</button>
         <button class="grid-btn" onclick="setGridSize(128)" id="grid128">128x128</button>
     </div>
+    <div class="reset-controls">
+        <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset Game</button>
+    </div>
 </div>
 
 <canvas id="gameCanvas" width="512" height="512"></canvas>
@@ -284,6 +287,12 @@
                     this.updateUI();
                     break;
 
+                case 'game_reset':
+                    console.log('Game has been reset:', data.message);
+                    document.getElementById('generation').textContent = '0';
+                    document.getElementById('players').textContent = data.players_count;
+                    break;
+
                 default:
                     console.log('Message non géré:', data);
             }
@@ -299,6 +308,15 @@
                 x: x,
                 y: y
             }));
+        }
+
+        resetGame() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'reset_game'
+            }));
+            console.log('Reset game command sent');
         }
 
         selectOrientation(orientation) {
@@ -390,6 +408,13 @@
     function setGridSize(size) {
         if (window.gameClient) {
             window.gameClient.setGridSize(size);
+        }
+    }
+
+    // Fonction globale pour réinitialiser le jeu
+    function resetGame() {
+        if (window.gameClient) {
+            window.gameClient.resetGame();
         }
     }
 

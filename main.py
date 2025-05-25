@@ -63,6 +63,11 @@ class PlacePatternCommand:
     timestamp: float
     orientation: Orientation = Orientation.UP
 
+@dataclass
+class ResetGameCommand:
+    player_id: str
+    timestamp: float
+
 # Patterns prédéfinis du Jeu de la Vie
 PATTERNS = {
     PatternType.GLIDER: np.array([
@@ -92,32 +97,17 @@ PATTERNS = {
 class GameState:
     def __init__(self):
         self.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=bool)
-        self.players: Dict[str, Player] = {}
         self.command_queue: List[PlacePatternCommand] = []
         self.generation = 0
         self.last_update = time.time()
 
-    def add_player(self, websocket: WebSocket, name: str) -> str:
-        player_id = str(uuid.uuid4())
-        color = len(self.players) % 10 + 1  # Couleurs 1-10
-        self.players[player_id] = Player(player_id, websocket, name, color)
-        logger.info(f"Nouveau joueur connecté: {name} (ID: {player_id[:8]}...) - Total: {len(self.players)} joueurs")
-        return player_id
-
-    def remove_player(self, player_id: str):
-        if player_id in self.players:
-            player = self.players[player_id]
-            del self.players[player_id]
-            logger.info(f"Joueur déconnecté: {player.name} (ID: {player_id[:8]}...) - Total: {len(self.players)} joueurs")
-
-    def add_command(self, command: PlacePatternCommand):
+    def add_command(self, command: PlacePatternCommand, player: Player):
         # Vérification basique pour éviter le spam
-        player = self.players.get(command.player_id)
-        if player and time.time() - player.last_action > 0.2:  # Limite à 2 actions/sec
+        if time.time() - player.last_action > 0.2:  # Limite à 2 actions/sec
             self.command_queue.append(command)
             player.last_action = time.time()
             logger.debug(f"Pattern {command.pattern_type.value} placé par {player.name} à ({command.x}, {command.y})")
-        elif player:
+        else:
             logger.debug(f"Action trop rapide ignorée pour {player.name}")
 
     def rotate_pattern(self, pattern: np.ndarray, orientation: Orientation) -> np.ndarray:
@@ -152,6 +142,9 @@ class GameState:
 
     def process_commands(self):
         """Traite toutes les commandes en attente."""
+        if not self.command_queue:
+            return
+
         for command in self.command_queue:
             self.place_pattern(command.pattern_type, command.x, command.y, command.orientation)
         self.command_queue.clear()
@@ -190,26 +183,27 @@ class GameState:
         # Log détaillé toutes les 50 générations, sinon juste les stats importantes
         if self.generation % 50 == 0 or alive_before != alive_after:
             logger.info(f"Génération {self.generation}: {alive_before} -> {alive_after} cellules vivantes "
-                        f"({alive_after - alive_before:+d}) | Calcul: {calc_time:.1f}ms | Joueurs: {len(self.players)}")
+                        f"({alive_after - alive_before:+d}) | Calcul: {calc_time:.1f}ms")
         else:
             logger.debug(f"Gen {self.generation}: {alive_after} cellules | {calc_time:.1f}ms")
 
-    def get_state_for_client(self) -> dict:
+    def get_state_for_client(self, players_count: int) -> dict:
         """Retourne l'état du jeu pour les clients."""
         return {
             "type": "game_state",
             "generation": self.generation,
             "grid": self.grid.tolist(),
-            "players_count": len(self.players),
+            "players_count": players_count,
             "timestamp": time.time()
         }
 
-# Instance globale du jeu
-game_state = GameState()
+# Instance globale du jeu (initialisée à None)
+game_state = None
 
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
+        self.players: Dict[str, Player] = {}
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -217,6 +211,22 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.discard(websocket)
+
+    def add_player(self, websocket: WebSocket, name: str) -> str:
+        player_id = str(uuid.uuid4())
+        color = len(self.players) % 10 + 1  # Couleurs 1-10
+        self.players[player_id] = Player(player_id, websocket, name, color)
+        logger.info(f"Nouveau joueur connecté: {name} (ID: {player_id[:8]}...) - Total: {len(self.players)} joueurs")
+        return player_id
+
+    def remove_player(self, player_id: str):
+        if player_id in self.players:
+            player = self.players[player_id]
+            del self.players[player_id]
+            logger.info(f"Joueur déconnecté: {player.name} (ID: {player_id[:8]}...) - Total: {len(self.players)} joueurs")
+
+    def get_player(self, player_id: str) -> Player:
+        return self.players.get(player_id)
 
     async def broadcast(self, message: dict):
         """Broadcast un message à tous les clients connectés."""
@@ -236,12 +246,36 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+def reset_game():
+    """Create a new game state or reset the existing one."""
+    global game_state
+
+    if game_state is None:
+        # Create a new game state
+        game_state = GameState()
+        logger.info("Game state initialized")
+    else:
+        # Reset the grid but keep the players
+        game_state.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=bool)
+        game_state.command_queue = []
+        game_state.generation = 0
+        game_state.last_update = time.time()
+        logger.info("Game state reset")
+
+    return game_state
+
 async def game_loop():
     """Boucle principale du jeu."""
     logger.info(f"Starting game loop")
     while True:
-        logger.info(f"Running loop {game_state.generation}")
         try:
+            # Skip if game state is not initialized yet
+            if game_state is None:
+                await asyncio.sleep(TICK_RATE / 1000.0)
+                continue
+
+            logger.info(f"Running loop {game_state.generation}")
+
             # Traiter les commandes des joueurs
             game_state.process_commands()
 
@@ -249,7 +283,8 @@ async def game_loop():
             game_state.next_generation()
 
             # Broadcaster le nouvel état
-            await manager.broadcast(game_state.get_state_for_client())
+            players_count = len(manager.players)
+            await manager.broadcast(game_state.get_state_for_client(players_count))
 
             # Attendre le prochain tick
             await asyncio.sleep(TICK_RATE / 1000.0)
@@ -276,7 +311,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
         if init_data.get("type") == "join":
             player_name = init_data.get("name", "Anonymous")
-            player_id = game_state.add_player(websocket, player_name)
+            player_id = manager.add_player(websocket, player_name)
 
             # Confirmer la connexion
             await websocket.send_text(json.dumps({
@@ -285,28 +320,47 @@ async def websocket_endpoint(websocket: WebSocket):
                 "message": f"Bienvenue {player_name}!"
             }))
 
-            # Envoyer l'état initial
-            await websocket.send_text(json.dumps(game_state.get_state_for_client()))
+            # Envoyer l'état initial si le jeu est déjà initialisé
+            if game_state is not None:
+                players_count = len(manager.players)
+                await websocket.send_text(json.dumps(game_state.get_state_for_client(players_count)))
 
         # Boucle de réception des commandes
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
 
-            if message.get("type") == "place_pattern":
+            if message.get("type") == "reset_game":
+                # Create or reset the game
+                reset_game()
+
+                # Notify all clients about the reset
+                players_count = len(manager.players)
+                await manager.broadcast({
+                    "type": "game_reset",
+                    "message": "Game has been reset",
+                    "players_count": players_count
+                })
+
+                # Send the initial state to all clients
+                await manager.broadcast(game_state.get_state_for_client(players_count))
+
+            elif message.get("type") == "place_pattern" and game_state is not None:
                 # Get orientation from message, default to UP if not provided
                 orientation_str = message.get("orientation", "up")
                 orientation = Orientation(orientation_str)
 
-                command = PlacePatternCommand(
-                    player_id=player_id,
-                    pattern_type=PatternType(message["pattern"]),
-                    x=message["x"],
-                    y=message["y"],
-                    timestamp=time.time(),
-                    orientation=orientation
-                )
-                game_state.add_command(command)
+                player = manager.get_player(player_id)
+                if player:
+                    command = PlacePatternCommand(
+                        player_id=player_id,
+                        pattern_type=PatternType(message["pattern"]),
+                        x=message["x"],
+                        y=message["y"],
+                        timestamp=time.time(),
+                        orientation=orientation
+                    )
+                    game_state.add_command(command, player)
 
     except WebSocketDisconnect:
         pass
@@ -314,7 +368,7 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.error(f"Erreur WebSocket: {e}")
     finally:
         if player_id:
-            game_state.remove_player(player_id)
+            manager.remove_player(player_id)
         manager.disconnect(websocket)
 
 
@@ -327,11 +381,18 @@ async def get_index():
 
 @app.get("/health")
 async def health_check():
-    return {
+    response = {
         "status": "ok",
-        "players": len(game_state.players),
-        "generation": game_state.generation
+        "players": len(manager.players)
     }
+
+    if game_state is not None:
+        response["generation"] = game_state.generation
+    else:
+        response["generation"] = 0
+        response["game_state"] = "not_initialized"
+
+    return response
 
 if __name__ == "__main__":
     import uvicorn
