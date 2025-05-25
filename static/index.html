@@ -121,18 +121,12 @@
     <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
         ⬜ Block
     </button>
-<!--    <div class="pattern-info">-->
-<!--        Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>-->
-<!--    </div>-->
     <div class="orientation-controls">
         <label>Orientation:</label>
         <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️ Haut</button>
         <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️ Droite</button>
         <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️ Bas</button>
         <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️ Gauche</button>
-<!--        <div class="orientation-info">-->
-<!--            Orientation: <strong><span id="selectedOrientation">up</span></strong>-->
-<!--        </div>-->
     </div>
     <div class="grid-size-controls">
         <label>Taille de la grille:</label>
@@ -390,7 +384,6 @@
 
         selectOrientation(orientation) {
             this.selectedOrientation = orientation;
-            document.getElementById('selectedOrientation').textContent = orientation;
 
             // Update visual indication of selected orientation
             document.querySelectorAll('.orientation-btn').forEach(btn => {
@@ -444,17 +437,13 @@
 
         selectPattern(pattern) {
             this.selectedPattern = pattern;
-            document.getElementById('selectedPattern').textContent = pattern;
 
             // Mise à jour visuelle des boutons
             document.querySelectorAll('.pattern-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
 
-            console.log(pattern);
-
             // Add selected class to the button for the selected pattern
-            // Use a more reliable selector based on the pattern name
             document.querySelector(`.pattern-btn[onclick*="selectPattern('${pattern}')"]`).classList.add('selected');
         }
     }
