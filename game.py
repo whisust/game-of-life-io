@@ -198,7 +198,7 @@ class GameState:
 
         # Log détaillé toutes les 100 générations, sinon juste les stats importantes
         if self.generation % 100 == 0 or alive_before != alive_after:
-            logger.info(f"Génération {self.generation}: {alive_before} -> {alive_after} cellules vivantes "
+            logger.debug(f"Génération {self.generation}: {alive_before} -> {alive_after} cellules vivantes "
                         f"({alive_after - alive_before:+d}) | Calcul: {calc_time:.1f}ms")
         else:
             logger.debug(f"Gen {self.generation}: {alive_after} cellules | {calc_time:.1f}ms")

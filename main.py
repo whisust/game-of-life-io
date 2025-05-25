@@ -157,7 +157,6 @@ async def get_index():
     return HTMLResponse(content=html_content)
 
 @app.get("/health")
-@app.get("/")
 async def health_check():
     response = {
         "status": "ok",
@@ -171,6 +170,13 @@ async def health_check():
         response["game_state"] = "not_initialized"
 
     return response
+
+@app.get("/")
+async def get_home():
+    """Serve the homepage."""
+    html_path = Path("static/home.html")
+    html_content = html_path.read_text()
+    return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     import uvicorn

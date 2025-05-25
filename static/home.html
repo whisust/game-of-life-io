@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game of Life - Home</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            padding: 30px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .description {
+            margin-bottom: 30px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .game-link {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #007acc;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+
+        .game-link:hover {
+            background-color: #005a9c;
+        }
+
+        .footer {
+            margin-top: 40px;
+            color: #777;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Welcome to Game of Life</h1>
+        
+        <div class="description">
+            <p>Conway's Game of Life is a cellular automaton devised by the British mathematician John Horton Conway in 1970.</p>
+            <p>It's a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input.</p>
+            <p>One interacts with the Game of Life by creating an initial configuration and observing how it evolves.</p>
+        </div>
+        
+        <a href="/game-of-life" class="game-link">Play Game of Life</a>
+        
+        <div class="footer">
+            <p>A multiplayer implementation of Conway's Game of Life</p>
+        </div>
+    </div>
+</body>
+</html>
