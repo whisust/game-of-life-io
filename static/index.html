@@ -3,6 +3,7 @@
 <head>
     <title>Game of Life Multiplayer</title>
     <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,9 +22,60 @@
             border: 2px solid #333;
             cursor: crosshair;
             display: block;
-            margin: 20px auto;
+            margin: 10px auto;
             background-color: #000;
             image-rendering: pixelated; /* Pour un rendu net des pixels */
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            #gameCanvas {
+                width: calc(100% - 20px); /* Take most of the width with small margin */
+                height: auto;
+                margin: 10px auto;
+            }
+
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 5px;
+            }
+
+            .controls {
+                margin: 10px 0;
+            }
+
+            .controls button {
+                margin: 3px;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+
+            /*.orientation-controls, .grid-size-controls, .game-controls {*/
+            /*    display: flex;*/
+            /*    flex-wrap: wrap;*/
+            /*    justify-content: center;*/
+            /*    margin-bottom: 10px;*/
+            /*}*/
+
+            .instructions {
+                padding: 10px;
+                margin: 10px auto;
+            }
+
+            .info {
+                font-size: 14px;
+                padding: 8px;
+            }
+        }
+
+        .admin-controls {
+            display: none;
         }
 
         .controls {
@@ -108,38 +160,40 @@
 </div>
 
 <div class="controls">
-    <label>Pattern:</label>
-    <button class="pattern-btn" onclick="selectPattern('glider')" title="Raccourci: 1">
-        🚀 Glider
-    </button>
-    <button class="pattern-btn" onclick="selectPattern('oscillator')" title="Raccourci: 2">
-        ⚡ Oscillateur
-    </button>
-    <button class="pattern-btn" onclick="selectPattern('spaceship')" title="Raccourci: 3">
-        🛸 Vaisseau
-    </button>
-    <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
-        ⬜ Block
-    </button>
+    <div class="pattern-controls">
+        <label>Pattern:</label>
+        <button class="pattern-btn" onclick="selectPattern('glider')" title="Raccourci: 1">
+            🚀 Glider
+        </button>
+        <button class="pattern-btn" onclick="selectPattern('oscillator')" title="Raccourci: 2">
+            ⚡ Oscillateur
+        </button>
+        <button class="pattern-btn" onclick="selectPattern('spaceship')" title="Raccourci: 3">
+            🛸 Vaisseau
+        </button>
+        <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
+            ⬜ Block
+        </button>
+    </div>
     <div class="orientation-controls">
         <label>Orientation:</label>
-        <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️ Haut</button>
-        <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️ Droite</button>
-        <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️ Bas</button>
-        <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️ Gauche</button>
+        <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️</button>
+        <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️</button>
+        <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️</button>
+        <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️</button>
     </div>
     <div class="grid-size-controls admin-controls">
-        <label>Taille de la grille:</label>
+        <label>Grille:</label>
         <button class="grid-btn" onclick="setGridSize(512)" id="grid512">512x512</button>
         <button class="grid-btn" onclick="setGridSize(256)" id="grid256">256x256</button>
         <button class="grid-btn" onclick="setGridSize(128)" id="grid128">128x128</button>
     </div>
     <div class="game-controls admin-controls">
-        <button class="init-btn" onclick="initGame()" id="initBtn">🚀 Initialize Game</button>
-        <button class="pause-btn" onclick="pauseGame()" id="pauseBtn">⏸️ Pause Game</button>
-        <button class="resume-btn" onclick="resumeGame()" id="resumeBtn">▶️ Resume Game</button>
-        <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset Game</button>
-        <button class="stop-btn" onclick="stopGame()" id="stopBtn">⏹️ Stop Game</button>
+        <button class="init-btn" onclick="initGame()" id="initBtn">🚀 Initialize</button>
+        <button class="pause-btn" onclick="pauseGame()" id="pauseBtn">⏸️ Pause</button>
+        <button class="resume-btn" onclick="resumeGame()" id="resumeBtn">▶️ Resume</button>
+        <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset</button>
+        <button class="stop-btn" onclick="stopGame()" id="stopBtn">⏹️ Stop</button>
     </div>
 </div>
 
@@ -185,15 +239,37 @@
         }
 
         setupCanvas() {
-            // Ajuster la taille d'affichage pour une meilleure visibilité
-            this.canvas.style.width = '512px';
-            this.canvas.style.height = '512px';
-            this.canvas.width = 512;
-            this.canvas.height = 512;
+            // Set the canvas size based on device
+            this.updateCanvasSize();
+
+            // Handle window resize events
+            window.addEventListener('resize', () => {
+                this.updateCanvasSize();
+                // Re-render if we have game state
+                if (this.gameState) {
+                    this.render();
+                }
+            });
 
             // Canvas noir par défaut
             this.ctx.fillStyle = '#000000';
-            this.ctx.fillRect(0, 0, 512, 512);
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        updateCanvasSize() {
+            // For mobile, use responsive sizing
+            if (window.innerWidth <= 768) {
+                // Let CSS handle the display size
+                // But keep the internal canvas dimensions fixed for game logic
+                this.canvas.width = 512;
+                this.canvas.height = 512;
+            } else {
+                // For desktop, use fixed size
+                this.canvas.width = 512;
+                this.canvas.height = 512;
+                this.canvas.style.width = '512px';
+                this.canvas.style.height = '512px';
+            }
         }
 
         setupEventListeners() {
@@ -201,10 +277,46 @@
                 if (!this.isConnected || !this.player) return;
 
                 const rect = this.canvas.getBoundingClientRect();
-                const x = Math.floor((e.clientX - rect.left) * (this.gridSize / this.canvas.clientWidth));
-                const y = Math.floor((e.clientY - rect.top) * (this.gridSize / this.canvas.clientHeight));
+                // Calculate the scaling factor between display size and internal canvas size
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+
+                // Calculate the position in the internal canvas coordinates
+                const canvasX = (e.clientX - rect.left) * scaleX;
+                const canvasY = (e.clientY - rect.top) * scaleY;
+
+                // Convert to grid coordinates
+                const x = Math.floor(canvasX * (this.gridSize / this.canvas.width));
+                const y = Math.floor(canvasY * (this.gridSize / this.canvas.height));
 
                 this.placePattern(x, y);
+            });
+
+            // Add touch support for mobile devices
+            this.canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevent scrolling when touching the canvas
+            });
+
+            this.canvas.addEventListener('touchend', (e) => {
+                if (!this.isConnected || !this.player || !e.changedTouches[0]) return;
+
+                const touch = e.changedTouches[0];
+                const rect = this.canvas.getBoundingClientRect();
+
+                // Calculate the scaling factor between display size and internal canvas size
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+
+                // Calculate the position in the internal canvas coordinates
+                const canvasX = (touch.clientX - rect.left) * scaleX;
+                const canvasY = (touch.clientY - rect.top) * scaleY;
+
+                // Convert to grid coordinates
+                const x = Math.floor(canvasX * (this.gridSize / this.canvas.width));
+                const y = Math.floor(canvasY * (this.gridSize / this.canvas.height));
+
+                this.placePattern(x, y);
+                e.preventDefault();
             });
 
             // Empêcher le menu contextuel sur clic droit
