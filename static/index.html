@@ -48,6 +48,12 @@
             color: white;
         }
 
+        .selected {
+            background-color: #007acc !important;
+            color: white !important;
+            font-weight: bold;
+        }
+
         .info {
             margin: 10px 0;
             text-align: center;
@@ -102,16 +108,16 @@
 </div>
 
 <div class="controls">
-    <button onclick="selectPattern('glider')" title="Raccourci: 1">
+    <button class="pattern-btn" onclick="selectPattern('glider')" title="Raccourci: 1">
         🚀 Glider
     </button>
-    <button onclick="selectPattern('oscillator')" title="Raccourci: 2">
+    <button class="pattern-btn" onclick="selectPattern('oscillator')" title="Raccourci: 2">
         ⚡ Oscillateur
     </button>
-    <button onclick="selectPattern('spaceship')" title="Raccourci: 3">
+    <button class="pattern-btn" onclick="selectPattern('spaceship')" title="Raccourci: 3">
         🛸 Vaisseau
     </button>
-    <button onclick="selectPattern('block')" title="Raccourci: 4">
+    <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
         ⬜ Block
     </button>
     <div class="pattern-info">
@@ -119,9 +125,9 @@
     </div>
     <div class="grid-size-controls">
         <label>Taille de la grille:</label>
-        <button onclick="setGridSize(512)" id="grid512">512x512</button>
-        <button onclick="setGridSize(256)" id="grid256">256x256</button>
-        <button onclick="setGridSize(128)" id="grid128">128x128</button>
+        <button class="grid-btn" onclick="setGridSize(512)" id="grid512">512x512</button>
+        <button class="grid-btn" onclick="setGridSize(256)" id="grid256">256x256</button>
+        <button class="grid-btn" onclick="setGridSize(128)" id="grid128">128x128</button>
     </div>
 </div>
 
@@ -159,8 +165,7 @@
             this.connect();
 
             // Highlight default grid size button
-            document.getElementById(`grid${this.gridSize}`).style.backgroundColor = '#007acc';
-            document.getElementById(`grid${this.gridSize}`).style.color = 'white';
+            document.getElementById(`grid${this.gridSize}`).classList.add('selected');
         }
 
         setupCanvas() {
@@ -195,13 +200,11 @@
             this.cellSize = this.canvasSize / this.gridSize;
 
             // Update UI
-            document.querySelectorAll('.grid-size-controls button').forEach(btn => {
-                btn.style.backgroundColor = '';
-                btn.style.color = '#007acc';
+            document.querySelectorAll('.grid-btn').forEach(btn => {
+                btn.classList.remove('selected');
             });
 
-            document.getElementById(`grid${size}`).style.backgroundColor = '#007acc';
-            document.getElementById(`grid${size}`).style.color = 'white';
+            document.getElementById(`grid${size}`).classList.add('selected');
 
             // Re-render if we have game state
             if (this.gameState) {
@@ -330,14 +333,15 @@
             document.getElementById('selectedPattern').textContent = pattern;
 
             // Mise à jour visuelle des boutons
-            document.querySelectorAll('.controls button').forEach(btn => {
-                btn.style.backgroundColor = '';
-                btn.style.fontWeight = '';
+            document.querySelectorAll('.pattern-btn').forEach(btn => {
+                btn.classList.remove('selected');
             });
 
-            event.target.style.backgroundColor = '#007acc';
-            event.target.style.fontWeight = 'bold';
-            event.target.style.color = 'white';
+            console.log(pattern);
+
+            // Add selected class to the button for the selected pattern
+            // Use a more reliable selector based on the pattern name
+            document.querySelector(`.pattern-btn[onclick*="selectPattern('${pattern}')"]`).classList.add('selected');
         }
     }
 
@@ -361,7 +365,7 @@
 
         // Sélectionner le premier pattern par défaut
         setTimeout(() => {
-            document.querySelector('.controls button').click();
+            document.querySelector('.pattern-btn').click();
         }, 100);
     });
 
