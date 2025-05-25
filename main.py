@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("gameoflife")
 
 # Configuration du jeu
-GRID_SIZE = 512
+GRID_SIZE = 256
 TICK_RATE = CONFIG['TICK_RATE_MS']  # ms
 MAX_PLAYERS = CONFIG['MAX_PLAYERS']
 
@@ -105,7 +105,7 @@ class GameState:
     def add_command(self, command: PlacePatternCommand):
         # Vérification basique pour éviter le spam
         player = self.players.get(command.player_id)
-        if player and time.time() - player.last_action > 0.5:  # Limite à 2 actions/sec
+        if player and time.time() - player.last_action > 0.2:  # Limite à 2 actions/sec
             self.command_queue.append(command)
             player.last_action = time.time()
             logger.debug(f"Pattern {command.pattern_type.value} placé par {player.name} à ({command.x}, {command.y})")

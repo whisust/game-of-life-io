@@ -117,6 +117,12 @@
     <div class="pattern-info">
         Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>
     </div>
+    <div class="grid-size-controls">
+        <label>Taille de la grille:</label>
+        <button onclick="setGridSize(512)" id="grid512">512x512</button>
+        <button onclick="setGridSize(256)" id="grid256">256x256</button>
+        <button onclick="setGridSize(128)" id="grid128">128x128</button>
+    </div>
 </div>
 
 <canvas id="gameCanvas" width="512" height="512"></canvas>
@@ -142,14 +148,19 @@
             this.ws = null;
             this.playerId = null;
             this.selectedPattern = 'glider';
-            this.gridSize = 512;
-            this.cellSize = 1; // 1 pixel par cellule pour du 512x512
+            this.gridSize = 256; // Default grid size
+            this.canvasSize = 512; // Fixed canvas size
+            this.cellSize = this.canvasSize / this.gridSize; // Calculate cell size based on grid size
             this.gameState = null;
             this.isConnected = false;
 
             this.setupCanvas();
             this.setupEventListeners();
             this.connect();
+
+            // Highlight default grid size button
+            document.getElementById(`grid${this.gridSize}`).style.backgroundColor = '#007acc';
+            document.getElementById(`grid${this.gridSize}`).style.color = 'white';
         }
 
         setupCanvas() {
@@ -177,6 +188,25 @@
 
             // Empêcher le menu contextuel sur clic droit
             this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        setGridSize(size) {
+            this.gridSize = size;
+            this.cellSize = this.canvasSize / this.gridSize;
+
+            // Update UI
+            document.querySelectorAll('.grid-size-controls button').forEach(btn => {
+                btn.style.backgroundColor = '';
+                btn.style.color = '#007acc';
+            });
+
+            document.getElementById(`grid${size}`).style.backgroundColor = '#007acc';
+            document.getElementById(`grid${size}`).style.color = 'white';
+
+            // Re-render if we have game state
+            if (this.gameState) {
+                this.render();
+            }
         }
 
         connect() {
@@ -256,32 +286,28 @@
         render() {
             if (!this.gameState) return;
 
-            const imageData = this.ctx.createImageData(512, 512);
-            const data = imageData.data;
+            // Clear the canvas
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvasSize, this.canvasSize);
 
-            // Remplir pixel par pixel
+            // Set cell color
+            this.ctx.fillStyle = '#FFFFFF';
+
+            // Draw cells based on cell size
             for (let y = 0; y < this.gridSize; y++) {
                 for (let x = 0; x < this.gridSize; x++) {
-                    const index = (y * 512 + x) * 4;
                     const isAlive = this.gameState.grid[y][x];
 
                     if (isAlive) {
-                        // Cellule vivante = blanc
-                        data[index] = 255;     // R
-                        data[index + 1] = 255; // G
-                        data[index + 2] = 255; // B
-                        data[index + 3] = 255; // A
-                    } else {
-                        // Cellule morte = noir
-                        data[index] = 0;       // R
-                        data[index + 1] = 0;   // G
-                        data[index + 2] = 0;   // B
-                        data[index + 3] = 255; // A
+                        // Calculate position based on cell size
+                        const pixelX = x * this.cellSize;
+                        const pixelY = y * this.cellSize;
+
+                        // Draw the cell
+                        this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
                     }
                 }
             }
-
-            this.ctx.putImageData(imageData, 0, 0);
         }
 
         updateUI() {
@@ -319,6 +345,13 @@
     function selectPattern(pattern) {
         if (window.gameClient) {
             window.gameClient.selectPattern(pattern);
+        }
+    }
+
+    // Fonction globale pour changer la taille de la grille
+    function setGridSize(size) {
+        if (window.gameClient) {
+            window.gameClient.setGridSize(size);
         }
     }
 
