@@ -4,7 +4,7 @@ import os
 
 CONFIG = {
     'LOG_LEVEL': os.getenv('LOG_LEVEL', logging.DEBUG),
-    'PORT': os.getenv('PORT', 8000),
+    'PORT': 9000,
     'HOST': os.getenv('HOST', "0.0.0.0"),
     'MAX_PLAYERS': int(os.getenv('MAX_PLAYERS', 50)),
     'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 250)),
