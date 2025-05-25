@@ -1,4 +1,3 @@
-import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import List, Optional
 
 import numpy as np
 from scipy import ndimage
+from config import logger
 
-logger = logging.getLogger("gameoflife")
 
 class PatternType(Enum):
     GLIDER = "glider"

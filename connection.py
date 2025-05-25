@@ -1,5 +1,4 @@
 import json
-import logging
 import uuid
 from typing import Dict, Set
 
@@ -7,7 +6,7 @@ from fastapi import WebSocket
 
 from game import Player
 
-logger = logging.getLogger("gameoflife")
+from config import logger
 
 class ConnectionManager:
     def __init__(self):
