@@ -20,8 +20,8 @@ def mock_websocket():
     return AsyncMock(spec=WebSocket)
 
 
-def test_add_command_valid(game_state, mock_websocket):
-    player = Player.factory(name="Player1", websocket=mock_websocket)
+def test_add_command_valid(game_state):
+    player = Player.factory(name="Player1")
 
     command = PlacePatternCommand(
         player_id=player.id,
@@ -36,8 +36,8 @@ def test_add_command_valid(game_state, mock_websocket):
     assert len(game_state.command_queue) == 1
     assert game_state.command_queue[0] == command
 
-def test_add_command_too_fast(game_state, mock_websocket):
-    player = Player.factory(name="Player1", websocket=mock_websocket)
+def test_add_command_too_fast(game_state):
+    player = Player.factory(name="Player1")
     player.last_action = time.time()  # Simulate recent action
 
     command = PlacePatternCommand(
@@ -103,8 +103,8 @@ def test_place_pattern_with_orientation(game_state):
     # Verify that the RIGHT pattern is the UP pattern rotated 270° clockwise
     assert np.array_equal(right_pattern, np.rot90(up_pattern, k=3))
 
-def test_process_commands(game_state, mock_websocket):
-    player = Player.factory(name="Player1", websocket=mock_websocket)
+def test_process_commands(game_state):
+    player = Player.factory(name="Player1")
 
     command = PlacePatternCommand(
         player_id=player.id,

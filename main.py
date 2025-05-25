@@ -26,7 +26,6 @@ logging.basicConfig(
 logger = logging.getLogger("gameoflife")
 
 
-
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
@@ -42,7 +41,7 @@ class ConnectionManager:
     def add_player(self, websocket: WebSocket, name: str) -> str:
         player_id = str(uuid.uuid4())
         color = len(self.players) % 10 + 1  # Couleurs 1-10
-        self.players[player_id] = Player(player_id, websocket, name, color)
+        self.players[player_id] = Player(player_id, name, color)
         logger.info(f"Nouveau joueur connecté: {name} (ID: {player_id[:8]}...) - Total: {len(self.players)} joueurs")
         return player_id
 

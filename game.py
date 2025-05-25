@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 from scipy import ndimage
-from fastapi import WebSocket
 
 logger = logging.getLogger("gameoflife")
 
@@ -20,16 +19,15 @@ class PatternType(Enum):
 @dataclass
 class Player:
     id: str
-    websocket: WebSocket
     name: str
     color: int  # Pour identifier visuellement les contributions
     last_action: float = 0
 
     @classmethod
-    def factory(cls, name: Optional[str] = None, color: Optional[int] = None, websocket: Optional[WebSocket] = None):
+    def factory(cls, name: Optional[str] = None, color: Optional[int] = None):
         player_id = str(uuid.uuid4())
         color = color or 1  # Couleurs 1-10
-        return Player(player_id, websocket=websocket, name=name, color=color)
+        return Player(player_id, name=name, color=color)
 
 class Orientation(Enum):
     UP = "up"
