@@ -141,6 +141,8 @@
     </div>
     <div class="game-controls">
         <button class="init-btn" onclick="initGame()" id="initBtn">🚀 Initialize Game</button>
+        <button class="pause-btn" onclick="pauseGame()" id="pauseBtn">⏸️ Pause Game</button>
+        <button class="resume-btn" onclick="resumeGame()" id="resumeBtn">▶️ Resume Game</button>
         <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset Game</button>
     </div>
 </div>
@@ -303,6 +305,16 @@
                     document.getElementById('players').textContent = data.players_count;
                     break;
 
+                case 'game_paused':
+                    console.log('Game has been paused:', data.message);
+                    // You could update UI to show paused state
+                    break;
+
+                case 'game_resumed':
+                    console.log('Game has been resumed:', data.message);
+                    // You could update UI to show resumed state
+                    break;
+
                 default:
                     console.log('Message non géré:', data);
             }
@@ -328,6 +340,24 @@
                 grid_size: this.gridSize
             }));
             console.log(`Initialize game command sent with grid size ${this.gridSize}`);
+        }
+
+        pauseGame() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'pause_game'
+            }));
+            console.log('Pause game command sent');
+        }
+
+        resumeGame() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'resume_game'
+            }));
+            console.log('Resume game command sent');
         }
 
         resetGame() {
@@ -436,6 +466,20 @@
     function initGame() {
         if (window.gameClient) {
             window.gameClient.initGame();
+        }
+    }
+
+    // Fonction globale pour mettre en pause le jeu
+    function pauseGame() {
+        if (window.gameClient) {
+            window.gameClient.pauseGame();
+        }
+    }
+
+    // Fonction globale pour reprendre le jeu
+    function resumeGame() {
+        if (window.gameClient) {
+            window.gameClient.resumeGame();
         }
     }
 

@@ -15,6 +15,7 @@ class ServerState:
         self.grid_size = None
         self.tick_rate = CONFIG['TICK_RATE_MS']  # ms
         self.max_players = CONFIG['MAX_PLAYERS']
+        self.paused = False
 
     def init_game(self, grid_size: int = CONFIG['GRID_SIZE']):
         if self.game_state is None:
@@ -32,6 +33,22 @@ class ServerState:
 
         return self.game_state
 
+    def pause_game(self):
+        """Pause the game."""
+        if self.game_state is not None:
+            self.paused = True
+            logger.info("Game paused")
+            return True
+        return False
+
+    def resume_game(self):
+        """Resume the game."""
+        if self.game_state is not None:
+            self.paused = False
+            logger.info("Game resumed")
+            return True
+        return False
+
     async def game_loop(self):
         """Boucle principale du jeu."""
         logger.info("Starting game loop")
@@ -47,8 +64,9 @@ class ServerState:
                 # Traiter les commandes des joueurs
                 self.game_state.process_commands()
 
-                # Calculer la prochaine génération
-                self.game_state.next_generation()
+                # Calculer la prochaine génération seulement si le jeu n'est pas en pause
+                if not self.paused:
+                    self.game_state.next_generation()
 
                 # Broadcaster le nouvel état
                 players_count = len(self.connection_manager.players)

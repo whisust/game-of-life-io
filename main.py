@@ -88,6 +88,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 if server_state.game_state is not None:
                     await server_state.connection_manager.broadcast(server_state.game_state.get_state_for_client(players_count))
 
+            elif message.get("type") == "pause_game" and server_state.game_state is not None:
+                # Pause the game
+                if server_state.pause_game():
+                    # Notify all clients about the pause
+                    await server_state.connection_manager.broadcast({
+                        "type": "game_paused",
+                        "message": "Game has been paused"
+                    })
+
+            elif message.get("type") == "resume_game" and server_state.game_state is not None:
+                # Resume the game
+                if server_state.resume_game():
+                    # Notify all clients about the resume
+                    await server_state.connection_manager.broadcast({
+                        "type": "game_resumed",
+                        "message": "Game has been resumed"
+                    })
+
             elif message.get("type") == "place_pattern" and server_state.game_state is not None:
                 # Get orientation from message, default to UP if not provided
                 orientation_str = message.get("orientation", "up")
