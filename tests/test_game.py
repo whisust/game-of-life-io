@@ -8,7 +8,7 @@ import pytest
 from fastapi.websockets import WebSocket
 
 from config import CONFIG
-from main import GameState, PlacePatternCommand, PatternType, Orientation, PATTERNS, Player
+from game import GameState, PlacePatternCommand, PatternType, Orientation, PATTERNS, Player
 
 
 @pytest.fixture
