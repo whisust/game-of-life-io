@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.12",
     "numpy>=2.2.6",
+    "pytest>=8.3.5",
     "scipy>=1.15.3",
     "uvicorn>=0.34.2",
     "websockets>=15.0.1",

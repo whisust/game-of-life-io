@@ -142,23 +142,23 @@ class GameState:
         # Calcul des voisins pour chaque cellule
         neighbors = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
 
-        # # Utilisation de convolution pour compter les voisins efficacement
-        # kernel = np.array([[1, 1, 1],
-        #                    [1, 0, 1],
-        #                    [1, 1, 1]])
-        #
-        # neighbors = ndimage.convolve(self.grid.astype(int), kernel, mode='constant')
-        #
-        # # Règles du Jeu de la Vie:
-        # # - Une cellule vivante avec 2 ou 3 voisins survit
-        # # - Une cellule morte avec exactement 3 voisins naît
-        # new_grid = np.zeros_like(self.grid)
-        # # A living cell with 2 or 3 neighbors survives
-        # new_grid[self.grid & ((neighbors == 2) | (neighbors == 3))] = True
-        # # A dead cell with exactly 3 neighbors becomes alive
-        # new_grid[(~self.grid) & (neighbors == 3)] = True
+        # Utilisation de convolution pour compter les voisins efficacement
+        kernel = np.array([[1, 1, 1],
+                           [1, 0, 1],
+                           [1, 1, 1]])
 
-        # self.grid = new_grid
+        neighbors = ndimage.convolve(self.grid.astype(int), kernel, mode='constant')
+
+        # Règles du Jeu de la Vie:
+        # - Une cellule vivante avec 2 ou 3 voisins survit
+        # - Une cellule morte avec exactement 3 voisins naît
+        new_grid = np.zeros_like(self.grid)
+        # A living cell with 2 or 3 neighbors survives
+        new_grid[self.grid & ((neighbors == 2) | (neighbors == 3))] = True
+        # A dead cell with exactly 3 neighbors becomes alive
+        new_grid[(~self.grid) & (neighbors == 3)] = True
+
+        self.grid = new_grid
         self.generation += 1
 
         # Statistiques de la génération
