@@ -40,7 +40,8 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps({
                 "type": "joined",
                 "player_id": player_id,
-                "message": f"Bienvenue {player_name}!"
+                "message": f"Bienvenue {player_name}!",
+                "grid_size": server_state.grid_size
             }))
 
             # Envoyer l'état initial si le jeu est déjà initialisé
