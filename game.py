@@ -21,6 +21,7 @@ class Player:
     name: str
     color: int  # Pour identifier visuellement les contributions
     last_action: float = 0
+    is_admin: bool = False
 
     @classmethod
     def factory(cls, name: Optional[str] = None, color: Optional[int] = None):

@@ -9,6 +9,7 @@ CONFIG = {
     'MAX_PLAYERS': int(os.getenv('MAX_PLAYERS', 50)),
     'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 250)),
     'GRID_SIZE': 256,
+    'ADMIN_NAME': os.getenv('ADMIN_NAME', "Tony"),
 }
 
 # Configuration du logging

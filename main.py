@@ -36,11 +36,16 @@ async def websocket_endpoint(websocket: WebSocket):
         if init_data.get("type") == "join":
             player_name = init_data.get("name", "Anonymous")
             player_id = server_state.connection_manager.add_player(websocket, player_name)
+            player = server_state.connection_manager.get_player(player_id)
 
             # Confirmer la connexion
             await websocket.send_text(json.dumps({
                 "type": "joined",
-                "player_id": player_id,
+                "player": {
+                    "id": player.id,
+                    "name": player.name,
+                    "is_admin": player.is_admin,
+                },
                 "message": f"Bienvenue {player_name}!",
                 "grid_size": server_state.grid_size
             }))
@@ -54,8 +59,9 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
+            player = server_state.connection_manager.get_player(player_id)
 
-            if message.get("type") == "reset_game":
+            if message.get("type") == "reset_game" and player.is_admin:
                 # Create or reset the game
                 server_state.reset_game(message.get('grid_size'))
 
@@ -71,7 +77,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Send the initial state to all clients
                 await server_state.connection_manager.broadcast(server_state.game_state.get_state_for_client(players_count))
 
-            elif message.get("type") == "init_game":
+            elif message.get("type") == "init_game" and player.is_admin:
                 # Initialize the game with specified grid size
                 grid_size = message.get("grid_size", CONFIG['GRID_SIZE'])
                 server_state.init_game(grid_size)
@@ -89,7 +95,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if server_state.game_state is not None:
                     await server_state.connection_manager.broadcast(server_state.game_state.get_state_for_client(players_count))
 
-            elif message.get("type") == "pause_game" and server_state.game_state is not None:
+            elif message.get("type") == "pause_game" and server_state.game_state is not None and player.is_admin:
                 # Pause the game
                 if server_state.pause_game():
                     # Notify all clients about the pause
@@ -98,7 +104,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": "Game has been paused"
                     })
 
-            elif message.get("type") == "resume_game" and server_state.game_state is not None:
+            elif message.get("type") == "resume_game" and server_state.game_state is not None and player.is_admin:
                 # Resume the game
                 if server_state.resume_game():
                     # Notify all clients about the resume
@@ -107,7 +113,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": "Game has been resumed"
                     })
 
-            elif message.get("type") == "stop_game":
+            elif message.get("type") == "stop_game" and player.is_admin:
                 # Stop the game
                 if server_state.stop():
                     # Notify all clients about the stop

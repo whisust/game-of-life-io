@@ -128,13 +128,13 @@
         <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️ Bas</button>
         <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️ Gauche</button>
     </div>
-    <div class="grid-size-controls">
+    <div class="grid-size-controls admin-controls">
         <label>Taille de la grille:</label>
         <button class="grid-btn" onclick="setGridSize(512)" id="grid512">512x512</button>
         <button class="grid-btn" onclick="setGridSize(256)" id="grid256">256x256</button>
         <button class="grid-btn" onclick="setGridSize(128)" id="grid128">128x128</button>
     </div>
-    <div class="game-controls">
+    <div class="game-controls admin-controls">
         <button class="init-btn" onclick="initGame()" id="initBtn">🚀 Initialize Game</button>
         <button class="pause-btn" onclick="pauseGame()" id="pauseBtn">⏸️ Pause Game</button>
         <button class="resume-btn" onclick="resumeGame()" id="resumeBtn">▶️ Resume Game</button>
@@ -165,7 +165,7 @@
             this.canvas = document.getElementById('gameCanvas');
             this.ctx = this.canvas.getContext('2d');
             this.ws = null;
-            this.playerId = null;
+            this.player = null;
             this.selectedPattern = 'glider';
             this.selectedOrientation = 'up'; // Default orientation
             this.gridSize = 128; // Default grid size
@@ -198,7 +198,7 @@
 
         setupEventListeners() {
             this.canvas.addEventListener('click', (e) => {
-                if (!this.isConnected || !this.playerId) return;
+                if (!this.isConnected || !this.player) return;
 
                 const rect = this.canvas.getBoundingClientRect();
                 const x = Math.floor((e.clientX - rect.left) * (this.gridSize / this.canvas.clientWidth));
@@ -240,6 +240,10 @@
 
                 // Rejoindre le jeu
                 const playerName = prompt('Entrez votre nom:') || 'Anonyme';
+
+                // Update UI based on admin status
+                this.updateUIVisibility();
+
                 this.ws.send(JSON.stringify({
                     type: 'join',
                     name: playerName
@@ -274,11 +278,17 @@
         handleMessage(data) {
             switch (data.type) {
                 case 'joined':
-                    this.playerId = data.player_id;
+                    this.player = {
+                        id: data.player.id,
+                        name: data.player.name,
+                        isAdmin: data.player.is_admin
+                    };
                     this.isConnected = true;
                     this.setGridSize(data.grid_size);
                     this.updateStatus('Connecté');
                     console.log('Rejoint le jeu:', data.message);
+                    // Update UI visibility based on admin status
+                    this.updateUIVisibility();
                     break;
 
                 case 'game_state':
@@ -433,6 +443,12 @@
             // Couleur selon le statut
             const statusEl = document.getElementById('status');
             statusEl.style.color = this.isConnected ? '#00aa00' : '#aa0000';
+        }
+
+        updateUIVisibility() {
+            // Show/hide controls
+            const adminControls = document.querySelectorAll('.admin-controls');
+            adminControls.forEach(el => el.style.display = this.player?.isAdmin ? 'block' : 'none');
         }
 
         selectPattern(pattern) {
