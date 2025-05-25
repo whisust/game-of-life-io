@@ -9,7 +9,6 @@ CONFIG = {
     'MAX_PLAYERS': int(os.getenv('MAX_PLAYERS', 50)),
     'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 250)),
     'GRID_SIZE': 256,
-    'SERVER_PREFIX': os.getenv('SERVER_PREFIX', "")
 }
 
 # Configuration du logging

@@ -23,7 +23,7 @@ server_state = ServerState()
 
 app = FastAPI()
 
-@app.websocket(CONFIG['SERVER_PREFIX'] + "/ws")
+@app.websocket("/game-of-life/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await server_state.connection_manager.connect(websocket)
     player_id = None
@@ -143,7 +143,7 @@ async def websocket_endpoint(websocket: WebSocket):
         server_state.connection_manager.disconnect(websocket)
 
 
-@app.get(CONFIG['SERVER_PREFIX'] + "/")
+@app.get("/game-of-life")
 async def get_index():
     """Servir la page principale."""
     html_path = Path("static/index.html")
@@ -151,6 +151,7 @@ async def get_index():
     return HTMLResponse(content=html_content)
 
 @app.get("/health")
+@app.get("/")
 async def health_check():
     response = {
         "status": "ok",

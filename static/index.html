@@ -236,7 +236,7 @@
 
         connect() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            const wsUrl = `${protocol}//${window.location.host}/game-of-life/ws`;
 
             this.ws = new WebSocket(wsUrl);
 
