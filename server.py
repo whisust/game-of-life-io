@@ -73,7 +73,7 @@ class ServerState:
 
     async def game_loop(self):
         """Boucle principale du jeu."""
-        logger.info("Starting game loop")
+        logger.info("Starting server game loop")
         while self.running:
             try:
                 # Skip if game state is not initialized yet
@@ -81,7 +81,7 @@ class ServerState:
                     await asyncio.sleep(self.tick_rate / 1000.0)
                     continue
 
-                logger.info(f"Running loop {self.game_state.generation}")
+                logger.debug(f"Running loop {self.game_state.generation}")
 
                 # Traiter les commandes des joueurs
                 self.game_state.process_commands()

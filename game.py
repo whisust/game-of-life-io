@@ -91,9 +91,9 @@ class GameState:
         if time.time() - player.last_action > 0.2:  # Limite à 2 actions/sec
             self.command_queue.append(command)
             player.last_action = time.time()
-            logger.debug(f"Pattern {command.pattern_type.value} placé par {player.name} à ({command.x}, {command.y})")
+            logger.info(f"Pattern {command.pattern_type.value} placé par {player.name} en ({command.x}, {command.y})")
         else:
-            logger.debug(f"Action trop rapide ignorée pour {player.name}")
+            logger.info(f"Action trop rapide ignorée pour {player.name}")
 
     def rotate_pattern(self, pattern: np.ndarray, orientation: Orientation) -> np.ndarray:
         """Rotate a pattern according to the specified orientation."""
@@ -165,8 +165,8 @@ class GameState:
         alive_after = np.sum(self.grid)
         calc_time = (time.time() - start_time) * 1000  # en ms
 
-        # Log détaillé toutes les 50 générations, sinon juste les stats importantes
-        if self.generation % 50 == 0 or alive_before != alive_after:
+        # Log détaillé toutes les 100 générations, sinon juste les stats importantes
+        if self.generation % 100 == 0 or alive_before != alive_after:
             logger.info(f"Génération {self.generation}: {alive_before} -> {alive_after} cellules vivantes "
                         f"({alive_after - alive_before:+d}) | Calcul: {calc_time:.1f}ms")
         else:
