@@ -8,19 +8,14 @@ from fastapi.responses import HTMLResponse
 import asyncio
 import json
 import numpy as np
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 import uuid
 from dataclasses import dataclass
 from enum import Enum
 import time
 from scipy import ndimage
 
-CONFIG = {
-    'LOG_LEVEL': os.getenv('LOG_LEVEL', logging.DEBUG),
-    'PORT': os.getenv('PORT', 8000),
-    'MAX_PLAYERS': int(os.getenv('MAX_PLAYERS', 50)),
-    'TICK_RATE_MS': int(os.getenv('TICK_RATE_MS', 250)),
-}
+from config import CONFIG
 
 # Configuration du logging
 logging.basicConfig(
@@ -30,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("gameoflife")
 
 # Configuration du jeu
-GRID_SIZE = 128
+GRID_SIZE = CONFIG['GRID_SIZE']
 TICK_RATE = CONFIG['TICK_RATE_MS']  # ms
 MAX_PLAYERS = CONFIG['MAX_PLAYERS']
 
@@ -47,6 +42,12 @@ class Player:
     name: str
     color: int  # Pour identifier visuellement les contributions
     last_action: float = 0
+
+    @classmethod
+    def factory(cls, name: Optional[str] = None, color: Optional[int] = None, websocket: Optional[WebSocket] = None):
+        player_id = str(uuid.uuid4())
+        color = color or 1  # Couleurs 1-10
+        return Player(player_id, websocket=websocket, name=name, color=color)
 
 class Orientation(Enum):
     UP = "up"
@@ -65,6 +66,11 @@ class PlacePatternCommand:
 
 @dataclass
 class ResetGameCommand:
+    player_id: str
+    timestamp: float
+
+@dataclass
+class StartGameCommand:
     player_id: str
     timestamp: float
 
@@ -95,8 +101,9 @@ PATTERNS = {
 }
 
 class GameState:
-    def __init__(self):
-        self.grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=bool)
+    def __init__(self, grid_size: int = 256):
+        self.grid_size = grid_size
+        self.grid = np.zeros((self.grid_size, self.grid_size), dtype=bool)
         self.command_queue: List[PlacePatternCommand] = []
         self.generation = 0
         self.last_update = time.time()
@@ -133,7 +140,7 @@ class GameState:
         h, w = pattern.shape
 
         # Vérification des limites
-        if x < 0 or y < 0 or x + w > GRID_SIZE or y + h > GRID_SIZE:
+        if x < 0 or y < 0 or x + w > self.grid_size or y + h > self.grid_size:
             return False
 
         # Placement du pattern
@@ -155,7 +162,7 @@ class GameState:
         alive_before = np.sum(self.grid)
 
         # Calcul des voisins pour chaque cellule
-        neighbors = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
+        neighbors = np.zeros((self.grid_size, self.grid_size), dtype=int)
 
         # Utilisation de convolution pour compter les voisins efficacement
         kernel = np.array([[1, 1, 1],
@@ -198,7 +205,7 @@ class GameState:
         }
 
 # Instance globale du jeu (initialisée à None)
-game_state = None
+game_state: Optional[GameState] = None
 
 class ConnectionManager:
     def __init__(self):
@@ -252,7 +259,7 @@ def reset_game():
 
     if game_state is None:
         # Create a new game state
-        game_state = GameState()
+        game_state = GameState(GRID_SIZE)
         logger.info("Game state initialized")
     else:
         # Reset the grid but keep the players
