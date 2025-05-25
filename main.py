@@ -15,12 +15,13 @@ from server import ServerState
 # Create the global server state
 server_state = ServerState()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    asyncio.create_task(server_state.game_loop())
-    yield
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Start the game loop
+#     game_loop_task = asyncio.create_task(server_state.game_loop())
+#     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -104,6 +105,15 @@ async def websocket_endpoint(websocket: WebSocket):
                     await server_state.connection_manager.broadcast({
                         "type": "game_resumed",
                         "message": "Game has been resumed"
+                    })
+
+            elif message.get("type") == "stop_game":
+                # Stop the game
+                if server_state.stop():
+                    # Notify all clients about the stop
+                    await server_state.connection_manager.broadcast({
+                        "type": "game_stopped",
+                        "message": "Game has been stopped"
                     })
 
             elif message.get("type") == "place_pattern" and server_state.game_state is not None:

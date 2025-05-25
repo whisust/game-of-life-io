@@ -108,6 +108,7 @@
 </div>
 
 <div class="controls">
+    <label>Pattern:</label>
     <button class="pattern-btn" onclick="selectPattern('glider')" title="Raccourci: 1">
         🚀 Glider
     </button>
@@ -120,18 +121,18 @@
     <button class="pattern-btn" onclick="selectPattern('block')" title="Raccourci: 4">
         ⬜ Block
     </button>
-    <div class="pattern-info">
-        Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>
-    </div>
+<!--    <div class="pattern-info">-->
+<!--        Pattern sélectionné: <strong><span id="selectedPattern">glider</span></strong>-->
+<!--    </div>-->
     <div class="orientation-controls">
         <label>Orientation:</label>
         <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️ Haut</button>
         <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️ Droite</button>
         <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️ Bas</button>
         <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️ Gauche</button>
-        <div class="orientation-info">
-            Orientation: <strong><span id="selectedOrientation">up</span></strong>
-        </div>
+<!--        <div class="orientation-info">-->
+<!--            Orientation: <strong><span id="selectedOrientation">up</span></strong>-->
+<!--        </div>-->
     </div>
     <div class="grid-size-controls">
         <label>Taille de la grille:</label>
@@ -144,6 +145,7 @@
         <button class="pause-btn" onclick="pauseGame()" id="pauseBtn">⏸️ Pause Game</button>
         <button class="resume-btn" onclick="resumeGame()" id="resumeBtn">▶️ Resume Game</button>
         <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset Game</button>
+        <button class="stop-btn" onclick="stopGame()" id="stopBtn">⏹️ Stop Game</button>
     </div>
 </div>
 
@@ -315,6 +317,13 @@
                     // You could update UI to show resumed state
                     break;
 
+                case 'game_stopped':
+                    console.log('Game has been stopped:', data.message);
+                    // Update UI to show stopped state
+                    this.render();
+                    this.updateUI();
+                    break;
+
                 default:
                     console.log('Message non géré:', data);
             }
@@ -368,6 +377,15 @@
                 grid_size: this.gridSize
             }));
             console.log('Reset game command sent');
+        }
+
+        stopGame() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'stop_game'
+            }));
+            console.log('Stop game command sent');
         }
 
         selectOrientation(orientation) {
@@ -487,6 +505,13 @@
     function resetGame() {
         if (window.gameClient) {
             window.gameClient.resetGame();
+        }
+    }
+
+    // Fonction globale pour arrêter le jeu
+    function stopGame() {
+        if (window.gameClient) {
+            window.gameClient.stopGame();
         }
     }
 
