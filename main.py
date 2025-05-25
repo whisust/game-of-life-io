@@ -23,7 +23,7 @@ server_state = ServerState()
 
 app = FastAPI()
 
-@app.websocket("/ws")
+@app.websocket(CONFIG['SERVER_PREFIX'] + "/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await server_state.connection_manager.connect(websocket)
     player_id = None
@@ -143,7 +143,7 @@ async def websocket_endpoint(websocket: WebSocket):
         server_state.connection_manager.disconnect(websocket)
 
 
-@app.get("/")
+@app.get(CONFIG['SERVER_PREFIX'] + "/")
 async def get_index():
     """Servir la page principale."""
     html_path = Path("static/index.html")
