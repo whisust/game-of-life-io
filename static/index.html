@@ -139,7 +139,8 @@
         <button class="grid-btn" onclick="setGridSize(256)" id="grid256">256x256</button>
         <button class="grid-btn" onclick="setGridSize(128)" id="grid128">128x128</button>
     </div>
-    <div class="reset-controls">
+    <div class="game-controls">
+        <button class="init-btn" onclick="initGame()" id="initBtn">🚀 Initialize Game</button>
         <button class="reset-btn" onclick="resetGame()" id="resetBtn">🔄 Reset Game</button>
     </div>
 </div>
@@ -288,8 +289,16 @@
                     this.updateUI();
                     break;
 
+                case 'game_initialized':
+                    console.log('Game has been initialized:', data.message);
+                    this.setGridSize(data.grid_size);
+                    document.getElementById('generation').textContent = '0';
+                    document.getElementById('players').textContent = data.players_count;
+                    break;
+
                 case 'game_reset':
                     console.log('Game has been reset:', data.message);
+                    this.setGridSize(data.grid_size);
                     document.getElementById('generation').textContent = '0';
                     document.getElementById('players').textContent = data.players_count;
                     break;
@@ -311,11 +320,22 @@
             }));
         }
 
+        initGame() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+            this.ws.send(JSON.stringify({
+                type: 'init_game',
+                grid_size: this.gridSize
+            }));
+            console.log(`Initialize game command sent with grid size ${this.gridSize}`);
+        }
+
         resetGame() {
             if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
             this.ws.send(JSON.stringify({
-                type: 'reset_game'
+                type: 'reset_game',
+                grid_size: this.gridSize
             }));
             console.log('Reset game command sent');
         }
@@ -409,6 +429,13 @@
     function setGridSize(size) {
         if (window.gameClient) {
             window.gameClient.setGridSize(size);
+        }
+    }
+
+    // Fonction globale pour initialiser le jeu
+    function initGame() {
+        if (window.gameClient) {
+            window.gameClient.initGame();
         }
     }
 

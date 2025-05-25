@@ -12,23 +12,23 @@ class ServerState:
     def __init__(self):
         self.connection_manager = ConnectionManager()
         self.game_state: Optional[GameState] = None
-        self.grid_size = CONFIG['GRID_SIZE']
+        self.grid_size = None
         self.tick_rate = CONFIG['TICK_RATE_MS']  # ms
         self.max_players = CONFIG['MAX_PLAYERS']
 
-    def reset_game(self):
-        """Create a new game state or reset the existing one."""
+    def init_game(self, grid_size: int = CONFIG['GRID_SIZE']):
         if self.game_state is None:
             # Create a new game state
-            self.game_state = GameState(self.grid_size)
-            logger.info("Game state initialized")
-        else:
-            # Reset the grid but keep the players
-            self.game_state.grid = np.zeros((self.grid_size, self.grid_size), dtype=bool)
-            self.game_state.command_queue = []
-            self.game_state.generation = 0
-            self.game_state.last_update = time.time()
-            logger.info("Game state reset")
+            self.grid_size = grid_size
+            self.game_state = GameState(grid_size)
+            logger.info(f"Game initialized on grid {self.grid_size}x{self.grid_size}")
+        return self.game_state
+
+    def reset_game(self, grid_size: Optional[int] = None):
+        """Create a new game state or reset the existing one."""
+        self.grid_size = grid_size or self.grid_size
+        self.game_state = GameState(self.grid_size)
+        logger.info(f"Game reset on grid {self.grid_size}x{self.grid_size}")
 
         return self.game_state
 

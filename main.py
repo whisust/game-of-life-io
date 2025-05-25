@@ -56,18 +56,37 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if message.get("type") == "reset_game":
                 # Create or reset the game
-                server_state.reset_game()
+                server_state.reset_game(message.get('grid_size'))
 
                 # Notify all clients about the reset
                 players_count = len(server_state.connection_manager.players)
                 await server_state.connection_manager.broadcast({
                     "type": "game_reset",
                     "message": "Game has been reset",
+                    "grid_size": server_state.grid_size,
                     "players_count": players_count
                 })
 
                 # Send the initial state to all clients
                 await server_state.connection_manager.broadcast(server_state.game_state.get_state_for_client(players_count))
+
+            elif message.get("type") == "init_game":
+                # Initialize the game with specified grid size
+                grid_size = message.get("grid_size", CONFIG['GRID_SIZE'])
+                server_state.init_game(grid_size)
+
+                # Notify all clients about the initialization
+                players_count = len(server_state.connection_manager.players)
+                await server_state.connection_manager.broadcast({
+                    "type": "game_initialized",
+                    "message": f"Game has been initialized with grid size {grid_size}x{grid_size}",
+                    "grid_size": grid_size,
+                    "players_count": players_count
+                })
+
+                # Send the initial state to all clients
+                if server_state.game_state is not None:
+                    await server_state.connection_manager.broadcast(server_state.game_state.get_state_for_client(players_count))
 
             elif message.get("type") == "place_pattern" and server_state.game_state is not None:
                 # Get orientation from message, default to UP if not provided

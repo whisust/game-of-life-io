@@ -85,7 +85,6 @@ class GameState:
         self.grid = np.zeros((self.grid_size, self.grid_size), dtype=bool)
         self.command_queue: List[PlacePatternCommand] = []
         self.generation = 0
-        self.last_update = time.time()
 
     def add_command(self, command: PlacePatternCommand, player: Player):
         # Vérification basique pour éviter le spam
