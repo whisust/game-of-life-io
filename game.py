@@ -16,6 +16,7 @@ class PatternType(Enum):
     BLOCK = "block"
     PULSAR = "pulsar"
     GLIDER_GUN = "glider_gun"
+    ERASER = "eraser"
 
 @dataclass
 class Player:
@@ -107,7 +108,15 @@ PATTERNS = {
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ], dtype=bool), k=1)
+    ], dtype=bool), k=1),
+
+    PatternType.ERASER: np.array([
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+    ], dtype=bool),
 }
 
 class GameState:
@@ -153,7 +162,10 @@ class GameState:
             return False
 
         # Placement du pattern
-        self.grid[y:y+h, x:x+w] |= pattern
+        if pattern_type == PatternType.ERASER:
+            self.grid[y:y+h, x:x+w] = np.zeros((h, w), dtype=bool)
+        else:
+            self.grid[y:y+h, x:x+w] |= pattern
         return True
 
     def process_commands(self):

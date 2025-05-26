@@ -180,6 +180,9 @@
         <button class="pattern-btn" onclick="selectPattern('glider_gun')" title="Raccourci: 6">
             🔫 Glider Gun
         </button>
+        <button class="pattern-btn" onclick="selectPattern('eraser')" title="Raccourci: 0">
+            🧽 Eraser
+        </button>
     </div>
     <div class="orientation-controls">
         <label>Orientation:</label>
@@ -1469,6 +1472,9 @@
                 break;
             case '6':
                 selectPattern('glider_gun');
+                break;
+            case '0':
+                selectPattern('eraser');
                 break;
 
             // Orientation selection with arrow keys
