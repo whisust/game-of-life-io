@@ -219,6 +219,17 @@
         <li><strong>Glider Gun</strong> : Génère des gliders périodiquement</li>
     </ul>
     <p><em>Le jeu évolue automatiquement toutes les 250ms selon les règles du Jeu de la Vie de Conway.</em></p>
+
+    <h3>🎵 Fonctionnalité sonore</h3>
+    <p>Activez le son pour entendre une mélodie générée par les cellules vivantes :</p>
+    <ul>
+        <li>La grille est divisée en 16 carrés égaux (4x4)</li>
+        <li>Chaque carré produit un son basé sur le nombre de cellules vivantes qu'il contient</li>
+        <li>Plus il y a de cellules vivantes, plus le son est fort</li>
+        <li>La mélodie joue à 120 BPM, suivant un motif rythmique</li>
+        <li>Les notes sont prédéfinies pour créer une mélodie harmonieuse</li>
+        <li>Lorsque le son est activé, la grille 4x4 est affichée en surimpression</li>
+    </ul>
 </div>
 
 <script>
@@ -236,14 +247,243 @@
             this.gameState = null;
             this.isConnected = false;
 
+            // Sound feature
+            this.audioContext = null;
+            this.soundEnabled = false;
+            this.soundGrid = 4; // 4x4 grid for sound
+            this.soundSquareSize = this.canvasSize / this.soundGrid;
+            this.bpm = 120; // 120 beats per minute
+            this.currentBeat = 0;
+            this.isPlaying = false;
+            this.soundTimer = null;
+            this.notes = [
+                // First row (C major scale)
+                'C4', 'D4', 'E4', 'F4',
+                // Second row (G major scale)
+                'G4', 'A4', 'B4', 'C5',
+                // Third row (F major scale)
+                'F4', 'G4', 'A4', 'Bb4',
+                // Fourth row (D minor scale)
+                'D4', 'E4', 'F4', 'G4'
+            ];
+
             this.setupCanvas();
             this.setupEventListeners();
+            this.setupAudio();
             this.connect();
 
             // Highlight default grid size button
             document.getElementById(`grid${this.gridSize}`).classList.add('selected');
             // Highlight default orientation button
             document.getElementById('orientUp').classList.add('selected');
+        }
+
+        setupAudio() {
+            try {
+                // Initialize Web Audio API
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('Audio context initialized');
+
+                // Create a toggle button for sound
+                const soundToggle = document.createElement('button');
+                soundToggle.textContent = '🔇 Sound Off';
+                soundToggle.id = 'soundToggle';
+                soundToggle.classList.add('sound-toggle');
+                soundToggle.onclick = () => this.toggleSound();
+
+                // Add the button to the controls
+                const controls = document.querySelector('.controls');
+                controls.appendChild(soundToggle);
+
+                // Add style for the sound toggle button
+                const style = document.createElement('style');
+                style.textContent = `
+                    .sound-toggle {
+                        margin: 5px;
+                        padding: 12px 16px;
+                        border: 2px solid #007acc;
+                        background-color: white;
+                        color: #007acc;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-weight: bold;
+                        transition: all 0.2s;
+                    }
+                    .sound-toggle:hover {
+                        background-color: #007acc;
+                        color: white;
+                    }
+                    .sound-toggle.active {
+                        background-color: #007acc;
+                        color: white;
+                    }
+                `;
+                document.head.appendChild(style);
+            } catch (e) {
+                console.error('Web Audio API is not supported in this browser', e);
+            }
+        }
+
+        toggleSound() {
+            this.soundEnabled = !this.soundEnabled;
+            const soundToggle = document.getElementById('soundToggle');
+
+            if (this.soundEnabled) {
+                soundToggle.textContent = '🔊 Sound On';
+                soundToggle.classList.add('active');
+
+                // Resume audio context if it was suspended
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+
+                // Start the sound loop if not already playing
+                if (!this.isPlaying) {
+                    this.startSoundLoop();
+                }
+            } else {
+                soundToggle.textContent = '🔇 Sound Off';
+                soundToggle.classList.remove('active');
+
+                // Stop the sound loop
+                this.stopSoundLoop();
+            }
+        }
+
+        startSoundLoop() {
+            if (!this.soundEnabled || this.isPlaying) return;
+
+            this.isPlaying = true;
+            this.currentBeat = 0;
+
+            // Calculate beat duration in milliseconds (60000 ms / BPM)
+            const beatDuration = 60000 / this.bpm;
+
+            // Start the loop
+            this.playCurrentBeat();
+            this.soundTimer = setInterval(() => {
+                this.currentBeat = (this.currentBeat + 1) % 8; // 8 beats in the loop
+                this.playCurrentBeat();
+            }, beatDuration);
+        }
+
+        stopSoundLoop() {
+            if (this.soundTimer) {
+                clearInterval(this.soundTimer);
+                this.soundTimer = null;
+            }
+            this.isPlaying = false;
+        }
+
+        playCurrentBeat() {
+            if (!this.soundEnabled || !this.audioContext || !this.gameState) return;
+
+            // For each beat, we play two squares according to the pattern:
+            // Beat 0: squares 0 and 8
+            // Beat 1: squares 1 and 9
+            // ...and so on
+            const square1 = this.currentBeat;
+            const square2 = this.currentBeat + 8;
+
+            this.playSquareSound(square1);
+            this.playSquareSound(square2);
+
+            // Re-render to update the highlighted squares
+            this.render();
+        }
+
+        playSquareSound(squareIndex) {
+            if (squareIndex >= 16) return; // Safety check
+
+            // Calculate the row and column of the square in the 4x4 grid
+            const row = Math.floor(squareIndex / 4);
+            const col = squareIndex % 4;
+
+            // Count alive cells in this square
+            const aliveCells = this.countAliveCellsInSquare(row, col);
+            if (aliveCells === 0) return; // Don't play sound if no cells are alive
+
+            // Get the note for this square
+            const note = this.notes[squareIndex];
+
+            // Calculate frequency based on the note
+            const frequency = this.noteToFrequency(note);
+
+            // Calculate volume based on alive cells (normalize to 0-1 range)
+            // Assuming a maximum of (squareSize/cellSize)^2 cells in a square
+            const maxCells = Math.pow(this.soundSquareSize / this.cellSize, 2);
+            const volume = Math.min(0.8, 0.1 + (aliveCells / maxCells) * 0.7);
+
+            // Play the sound
+            this.playTone(frequency, volume);
+        }
+
+        noteToFrequency(note) {
+            // Simple mapping of notes to frequencies (A4 = 440Hz)
+            const notes = {
+                'C4': 261.63, 'C#4': 277.18, 'Db4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'Eb4': 311.13,
+                'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'Gb4': 369.99, 'G4': 392.00, 'G#4': 415.30,
+                'Ab4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'Bb4': 466.16, 'B4': 493.88,
+                'C5': 523.25, 'C#5': 554.37, 'Db5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'Eb5': 622.25,
+                'E5': 659.26, 'F5': 698.46, 'F#5': 739.99, 'Gb5': 739.99, 'G5': 783.99
+            };
+
+            return notes[note] || 440; // Default to A4 if note not found
+        }
+
+        playTone(frequency, volume) {
+            if (!this.audioContext) return;
+
+            // Create oscillator
+            const oscillator = this.audioContext.createOscillator();
+            oscillator.type = 'sine'; // sine, square, sawtooth, triangle
+            oscillator.frequency.value = frequency;
+
+            // Create gain node for volume control
+            const gainNode = this.audioContext.createGain();
+            gainNode.gain.value = volume;
+
+            // Connect nodes
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            // Start and stop the oscillator
+            oscillator.start();
+
+            // Envelope for smoother sound
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+            gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
+
+            // Stop after a short duration
+            oscillator.stop(this.audioContext.currentTime + 0.3);
+        }
+
+        countAliveCellsInSquare(row, col) {
+            if (!this.gameState) return 0;
+
+            let count = 0;
+            const startX = col * this.soundSquareSize;
+            const startY = row * this.soundSquareSize;
+            const endX = startX + this.soundSquareSize;
+            const endY = startY + this.soundSquareSize;
+
+            // Convert pixel coordinates to grid coordinates
+            const gridStartX = Math.floor(startX / this.cellSize);
+            const gridStartY = Math.floor(startY / this.cellSize);
+            const gridEndX = Math.ceil(endX / this.cellSize);
+            const gridEndY = Math.ceil(endY / this.cellSize);
+
+            // Count alive cells in this region
+            for (let y = gridStartY; y < gridEndY && y < this.gridSize; y++) {
+                for (let x = gridStartX; x < gridEndX && x < this.gridSize; x++) {
+                    if (this.gameState.grid[y] && this.gameState.grid[y][x]) {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
         }
 
         setupCanvas() {
@@ -415,6 +655,11 @@
                     this.gameState = data;
                     this.render();
                     this.updateUI();
+
+                    // Start sound loop if enabled and not already playing
+                    if (this.soundEnabled && !this.isPlaying) {
+                        this.startSoundLoop();
+                    }
                     break;
 
                 case 'game_initialized':
@@ -422,6 +667,11 @@
                     this.setGridSize(data.grid_size);
                     document.getElementById('generation').textContent = '0';
                     document.getElementById('players').textContent = data.players_count;
+
+                    // Start sound loop if enabled and not already playing
+                    if (this.soundEnabled && !this.isPlaying) {
+                        this.startSoundLoop();
+                    }
                     break;
 
                 case 'game_reset':
@@ -429,16 +679,26 @@
                     this.setGridSize(data.grid_size);
                     document.getElementById('generation').textContent = '0';
                     document.getElementById('players').textContent = data.players_count;
+
+                    // Restart sound loop if enabled
+                    if (this.soundEnabled) {
+                        this.stopSoundLoop();
+                        this.startSoundLoop();
+                    }
                     break;
 
                 case 'game_paused':
                     console.log('Game has been paused:', data.message);
-                    // You could update UI to show paused state
+                    // Pause sound loop
+                    this.stopSoundLoop();
                     break;
 
                 case 'game_resumed':
                     console.log('Game has been resumed:', data.message);
-                    // You could update UI to show resumed state
+                    // Resume sound loop if enabled
+                    if (this.soundEnabled) {
+                        this.startSoundLoop();
+                    }
                     break;
 
                 case 'game_stopped':
@@ -446,6 +706,9 @@
                     // Update UI to show stopped state
                     this.render();
                     this.updateUI();
+
+                    // Stop sound loop
+                    this.stopSoundLoop();
                     break;
 
                 default:
@@ -548,6 +811,69 @@
                     }
                 }
             }
+
+            // Draw sound grid if sound is enabled
+            if (this.soundEnabled) {
+                this.drawSoundGrid();
+            }
+        }
+
+        drawSoundGrid() {
+            // Draw the 4x4 grid for sound visualization
+            this.ctx.strokeStyle = 'rgba(0, 122, 204, 0.5)'; // Semi-transparent blue
+            this.ctx.lineWidth = 2;
+
+            // Draw horizontal lines
+            for (let i = 1; i < this.soundGrid; i++) {
+                const y = i * this.soundSquareSize;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvasSize, y);
+                this.ctx.stroke();
+            }
+
+            // Draw vertical lines
+            for (let i = 1; i < this.soundGrid; i++) {
+                const x = i * this.soundSquareSize;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, 0);
+                this.ctx.lineTo(x, this.canvasSize);
+                this.ctx.stroke();
+            }
+
+            // Highlight the current beat squares
+            if (this.isPlaying) {
+                const square1 = this.currentBeat;
+                const square2 = this.currentBeat + 8;
+
+                this.highlightSoundSquare(square1);
+                this.highlightSoundSquare(square2);
+            }
+        }
+
+        highlightSoundSquare(squareIndex) {
+            if (squareIndex >= 16) return;
+
+            const row = Math.floor(squareIndex / 4);
+            const col = squareIndex % 4;
+
+            const x = col * this.soundSquareSize;
+            const y = row * this.soundSquareSize;
+
+            // Draw a semi-transparent highlight
+            this.ctx.fillStyle = 'rgba(0, 122, 204, 0.2)'; // Very light blue
+            this.ctx.fillRect(x, y, this.soundSquareSize, this.soundSquareSize);
+
+            // Draw the note name in the square
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
+            this.ctx.font = '16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(
+                this.notes[squareIndex], 
+                x + this.soundSquareSize / 2, 
+                y + this.soundSquareSize / 2
+            );
         }
 
         updateUI() {
