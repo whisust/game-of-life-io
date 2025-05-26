@@ -219,21 +219,28 @@
         <li><strong>Glider Gun</strong> : Génère des gliders périodiquement</li>
     </ul>
     <p><em>Le jeu évolue automatiquement toutes les 250ms selon les règles du Jeu de la Vie de Conway.</em></p>
-
-    <h3>🎵 Fonctionnalité sonore</h3>
-    <p>Activez le son pour entendre une mélodie générée par les cellules vivantes :</p>
-    <ul>
-        <li>La grille est divisée en 16 carrés égaux (4x4)</li>
-        <li>Chaque carré produit un son basé sur le nombre de cellules vivantes qu'il contient</li>
-        <li>Plus il y a de cellules vivantes, plus le son est fort</li>
-        <li>La mélodie joue à 120 BPM, suivant un motif rythmique</li>
-        <li>Les notes sont prédéfinies pour créer une mélodie harmonieuse</li>
-        <li>Lorsque le son est activé, la grille 4x4 est affichée en surimpression</li>
-    </ul>
 </div>
 
 <script>
     class GameOfLifeClient {
+        static NOTES_FREQ = {
+            // Lower octaves for bass notes
+            'G2': 98.00, 'G#2': 103.83, 'Ab2': 103.83, 'A2': 110.00, 'A#2': 116.54,
+            'Bb2': 116.54, 'B2': 123.47, 'C3': 130.81, 'C#3': 138.59, 'Db3': 138.59,
+            'D3': 146.83, 'D#3': 155.56, 'Eb3': 155.56, 'E3': 164.81, 'F3': 174.61,
+            'F#3': 185.00, 'Gb3': 185.00, 'G3': 196.00, 'G#3': 207.65, 'Ab3': 207.65,
+            'A3': 220.00, 'A#3': 233.08, 'Bb3': 233.08, 'B3': 246.94,
+
+            // Middle octave
+            'C4': 261.63, 'C#4': 277.18, 'Db4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'Eb4': 311.13,
+            'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'Gb4': 369.99, 'G4': 392.00, 'G#4': 415.30,
+            'Ab4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'Bb4': 466.16, 'B4': 493.88,
+
+            // Higher octave for lead sounds
+            'C5': 523.25, 'C#5': 554.37, 'Db5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'Eb5': 622.25,
+            'E5': 659.26, 'F5': 698.46, 'F#5': 739.99, 'Gb5': 739.99, 'G5': 783.99
+        };
+
         constructor() {
             this.canvas = document.getElementById('gameCanvas');
             this.ctx = this.canvas.getContext('2d');
@@ -250,22 +257,54 @@
             // Sound feature
             this.audioContext = null;
             this.soundEnabled = false;
-            this.soundGrid = 4; // 4x4 grid for sound
-            this.soundSquareSize = this.canvasSize / this.soundGrid;
+            this.soundGridRows = 8; // 8 rows for instruments
+            this.soundGridCols = 16; // 16 columns for beats
+            this.soundSquareWidth = this.canvasSize / this.soundGridCols;
+            this.soundSquareHeight = this.canvasSize / this.soundGridRows;
             this.bpm = 120; // 120 beats per minute
             this.currentBeat = 0;
             this.isPlaying = false;
             this.soundTimer = null;
-            this.notes = [
-                // First row (C major scale)
-                'C4', 'D4', 'E4', 'F4',
-                // Second row (G major scale)
-                'G4', 'A4', 'B4', 'C5',
-                // Third row (F major scale)
-                'F4', 'G4', 'A4', 'Bb4',
-                // Fourth row (D minor scale)
-                'D4', 'E4', 'F4', 'G4'
+
+            // Define instrument types for each row
+            this.instruments = [
+                'drum',    // Row 0: Drum
+                'clap',    // Row 1: Clap
+                'hats',    // Row 2: Hats
+                'percussion', // Row 3: Percussion
+                'groove',  // Row 4: Groove
+                'bass',    // Row 5: Bass
+                'melody',  // Row 6: Simple melody with chords
+                // 'choir',    // Row 7: Choirs
+                'synth',    // Row 7: Choirs
             ];
+
+            // Notes for each instrument (row)
+            this.notes = {
+                // Row 0: Drum (just one note, as we'll use the 909 kick)
+                'drum': Array(16).fill('C2'),
+
+                // Row 1: Clap (just one note, as we'll use the 909 clap)
+                'clap': [null, 'D2', null, 'D2', null, 'D2', null, 'D2', null, 'D2', null, 'D2', null, 'D2', null, 'D2'],
+
+                // Row 2: Hats (just one note, as we'll use the 909 hi-hat)
+                'hats': [null, 'E2', null, 'E2', null, 'E2', null, 'E2', null, 'E2', null, 'E2', null, 'E2', null, 'E2'],
+
+                // Row 3: Percussion (various percussion sounds)
+                'percussion': Array(16).fill('F2'),
+
+                // Row 4: Groove (bassline groove in G minor)
+                'groove': ['G2', 'D3', 'G2', 'Bb2', 'G2', 'D3', 'G2', 'C3', 'G2', 'D3', 'G2', 'Bb2', 'G2', 'D3', 'G2', 'F3'],
+
+                // Row 5: Bass (deep bass notes in G minor)
+                'bass': ['G1', 'G1', null, 'Bb1', 'C2', 'C2', null, 'D2', 'G1', null, 'Bb1', 'Bb1', null, 'C2', 'D2', 'F2'],
+
+                // Row 6: Melody (simple melody with chord notes in G minor)
+                'melody': ['G4', null, 'D4', 'G4', null, 'Bb4', 'D4', 'F4', null, 'G4', 'Bb4', null, 'D4', 'F4', null, 'D4'],
+
+                // Row 7: Choirs (choir-like pads in G minor)
+                'synth': [null, 'Bb3', 'D3', null, 'F3', 'Bb3', 'D3', null, null, 'G3', 'Bb3', 'Eb3', 'D3', null, 'Bb3', 'D3']
+            };
 
             this.setupCanvas();
             this.setupEventListeners();
@@ -362,7 +401,7 @@
             // Start the loop
             this.playCurrentBeat();
             this.soundTimer = setInterval(() => {
-                this.currentBeat = (this.currentBeat + 1) % 8; // 8 beats in the loop
+                this.currentBeat = (this.currentBeat + 1) % this.soundGridCols; // 16 beats in the loop
                 this.playCurrentBeat();
             }, beatDuration);
         }
@@ -378,95 +417,477 @@
         playCurrentBeat() {
             if (!this.soundEnabled || !this.audioContext || !this.gameState) return;
 
-            // For each beat, we play two squares according to the pattern:
-            // Beat 0: squares 0 and 8
-            // Beat 1: squares 1 and 9
-            // ...and so on
-            const square1 = this.currentBeat;
-            const square2 = this.currentBeat + 8;
+            // Play all instruments in the current column
+            for (let row = 0; row < this.soundGridRows; row++) {
+                this.playSquareSound(row, this.currentBeat);
+            }
 
-            this.playSquareSound(square1);
-            this.playSquareSound(square2);
-
-            // Re-render to update the highlighted squares
+            // Re-render to update the highlighted column
             this.render();
         }
 
-        playSquareSound(squareIndex) {
-            if (squareIndex >= 16) return; // Safety check
-
-            // Calculate the row and column of the square in the 4x4 grid
-            const row = Math.floor(squareIndex / 4);
-            const col = squareIndex % 4;
+        playSquareSound(row, col) {
+            // Safety check
+            if (row >= this.soundGridRows || col >= this.soundGridCols) return;
 
             // Count alive cells in this square
             const aliveCells = this.countAliveCellsInSquare(row, col);
             if (aliveCells === 0) return; // Don't play sound if no cells are alive
 
-            // Get the note for this square
-            const note = this.notes[squareIndex];
+            // Get the instrument type for this row
+            const instrument = this.instruments[row];
 
-            // Calculate frequency based on the note
-            const frequency = this.noteToFrequency(note);
+            // Get the note for this instrument and column
+            const note = this.notes[instrument][col];
 
-            // Calculate volume based on alive cells (normalize to 0-1 range)
-            // Assuming a maximum of (squareSize/cellSize)^2 cells in a square
-            const maxCells = Math.pow(this.soundSquareSize / this.cellSize, 2);
-            const volume = Math.min(0.8, 0.1 + (aliveCells / maxCells) * 0.7);
+            if(note) {
+                // Calculate frequency based on the note
+                const frequency = this.noteToFrequency(note);
 
-            // Play the sound
-            this.playTone(frequency, volume);
+                // Calculate volume based on alive cells (normalize to 0-1 range)
+                // Assuming a maximum of (squareWidth*squareHeight/cellSize^2) cells in a square
+                const maxCells = Math.pow(this.soundSquareWidth * this.soundSquareHeight / (this.cellSize * this.cellSize), 1);
+                const volume = Math.min(0.8, 0.1 + (aliveCells / maxCells) * 0.7);
+
+                // Play the sound based on the instrument type
+                this.playInstrument(instrument, frequency, volume);
+            }
         }
 
         noteToFrequency(note) {
-            // Simple mapping of notes to frequencies (A4 = 440Hz)
-            const notes = {
-                'C4': 261.63, 'C#4': 277.18, 'Db4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'Eb4': 311.13,
-                'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'Gb4': 369.99, 'G4': 392.00, 'G#4': 415.30,
-                'Ab4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'Bb4': 466.16, 'B4': 493.88,
-                'C5': 523.25, 'C#5': 554.37, 'Db5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'Eb5': 622.25,
-                'E5': 659.26, 'F5': 698.46, 'F#5': 739.99, 'Gb5': 739.99, 'G5': 783.99
-            };
-
-            return notes[note] || 440; // Default to A4 if note not found
+            // Extended mapping of notes to frequencies (A4 = 440Hz)
+            return GameOfLifeClient.NOTES_FREQ[note] || 440; // Default to A4 if note not found
         }
 
-        playTone(frequency, volume) {
+        playInstrument(instrument, frequency, volume) {
             if (!this.audioContext) return;
 
-            // Create oscillator
-            const oscillator = this.audioContext.createOscillator();
-            oscillator.type = 'sine'; // sine, square, sawtooth, triangle
-            oscillator.frequency.value = frequency;
+            switch (instrument) {
+                case 'drum':
+                    this.play909Kick(volume);
+                    break;
+                case 'clap':
+                    this.play909Clap(volume);
+                    break;
+                case 'hats':
+                    this.play909HiHat(volume);
+                    break;
+                case 'percussion':
+                    this.playPercussion(volume);
+                    break;
+                case 'groove':
+                    this.playGroove(frequency, volume);
+                    break;
+                case 'bass':
+                    this.playBass(frequency, volume);
+                    break;
+                case 'melody':
+                    this.playMelody(frequency, volume);
+                    break;
+                case 'choir':
+                    this.playChoir(frequency, volume);
+                    break;
+                case 'synth':
+                    this.playDaftPunkSynth(frequency, volume);
+                default:
+                    this.playDaftPunkSynth(frequency, volume);
+            }
+        }
 
-            // Create gain node for volume control
+        play909Kick(volume) {
+            // Create a 909-style kick drum sound
+            const osc = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
-            gainNode.gain.value = volume;
+            const now = this.audioContext.currentTime;
 
-            // Connect nodes
-            oscillator.connect(gainNode);
+            // Set up oscillator for the kick
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+
+            // Set up gain envelope for the kick
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume, now + 0.005);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            // Connect and start
+            osc.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        }
+
+        play909Snare(volume) {
+            // Create a 909-style snare drum sound
+            const noiseNode = this.createNoiseNode(0.2);
+            const oscNode = this.audioContext.createOscillator();
+            const noiseGain = this.audioContext.createGain();
+            const oscGain = this.audioContext.createGain();
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillator component
+            oscNode.type = 'triangle';
+            oscNode.frequency.value = 180;
+
+            // Set up gain envelopes
+            noiseGain.gain.setValueAtTime(0, now);
+            noiseGain.gain.linearRampToValueAtTime(volume, now + 0.005);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(volume * 0.5, now + 0.005);
+            oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+            // Connect and start
+            noiseNode.connect(noiseGain);
+            oscNode.connect(oscGain);
+            noiseGain.connect(this.audioContext.destination);
+            oscGain.connect(this.audioContext.destination);
+
+            oscNode.start(now);
+            oscNode.stop(now + 0.2);
+        }
+
+        play909HiHat(volume) {
+            // Create a 909-style hi-hat sound
+            const noiseNode = this.createNoiseNode(0.05);
+            const gainNode = this.audioContext.createGain();
+            const highpassFilter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up filter
+            highpassFilter.type = 'highpass';
+            highpassFilter.frequency.value = 7000;
+            highpassFilter.Q.value = 1;
+
+            // Set up gain envelope
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.8, now + 0.001);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+            // Connect and start
+            noiseNode.connect(highpassFilter);
+            highpassFilter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+        }
+
+        play909Clap(volume) {
+            // Create a 909-style clap sound
+            const noiseNode = this.createNoiseNode(0.3);
+            const gainNode = this.audioContext.createGain();
+            const bandpassFilter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up filter for clap sound
+            bandpassFilter.type = 'bandpass';
+            bandpassFilter.frequency.value = 1200;
+            bandpassFilter.Q.value = 0.7;
+
+            // Set up gain envelope with a slight delay for clap effect
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.3, now + 0.01);
+            gainNode.gain.linearRampToValueAtTime(volume, now + 0.02);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.3, now + 0.03);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + 0.04);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+            // Connect and start
+            noiseNode.connect(bandpassFilter);
+            bandpassFilter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+        }
+
+        playPercussion(volume) {
+            // Create a percussion sound (like a conga or bongo)
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const bandpassFilter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillator for percussion
+            osc.type = 'triangle';
+            osc.frequency.value = 220;
+
+            // Set up filter
+            bandpassFilter.type = 'bandpass';
+            bandpassFilter.frequency.value = 800;
+            bandpassFilter.Q.value = 2;
+
+            // Set up gain envelope for short percussive sound
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume, now + 0.005);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            // Connect and start
+            osc.connect(bandpassFilter);
+            bandpassFilter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        playGroove(frequency, volume) {
+            // Create a groovy synth sound with rhythm
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const lowpassFilter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillator
+            osc.type = 'sawtooth';
+            osc.frequency.value = frequency;
+
+            // Set up filter
+            lowpassFilter.type = 'lowpass';
+            lowpassFilter.frequency.value = 1200;
+            lowpassFilter.Q.value = 5;
+
+            // Set up gain envelope with groove feel
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume, now + 0.01);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.5, now + 0.1);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.8, now + 0.15);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+            // Connect and start
+            osc.connect(lowpassFilter);
+            lowpassFilter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+
+        playBass(frequency, volume) {
+            // Create a deep bass sound
+            const osc1 = this.audioContext.createOscillator();
+            const osc2 = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const lowpassFilter = this.audioContext.createBiquadFilter();
+            const distortion = this.createDistortionEffect(5); // Subtle distortion
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillators for bass
+            osc1.type = 'sine';
+            osc1.frequency.value = frequency;
+
+            osc2.type = 'triangle';
+            osc2.frequency.value = frequency * 2; // One octave higher for harmonics
+
+            // Set up filter
+            lowpassFilter.type = 'lowpass';
+            lowpassFilter.frequency.value = 500;
+            lowpassFilter.Q.value = 1;
+
+            // Set up gain envelope for bass
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume, now + 0.02);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.8, now + 0.3);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+            // Connect and start
+            osc1.connect(distortion);
+            osc2.connect(distortion);
+            distortion.connect(lowpassFilter);
+            lowpassFilter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.6);
+            osc2.stop(now + 0.6);
+        }
+
+        playMelody(frequency, volume) {
+            // Create a melodic synth sound with chords
+            const osc1 = this.audioContext.createOscillator();
+            const osc2 = this.audioContext.createOscillator();
+            const osc3 = this.audioContext.createOscillator(); // For chord
+            const gainNode = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillators for melody with chord
+            osc1.type = 'sawtooth';
+            osc1.frequency.value = frequency;
+
+            osc2.type = 'square';
+            osc2.frequency.value = frequency * 1.005; // Slight detuning
+
+            osc3.type = 'sawtooth';
+            osc3.frequency.value = frequency * 1.5; // Perfect fifth for chord
+
+            // Set up filter
+            filter.type = 'bandpass';
+            filter.frequency.value = 2000;
+            filter.Q.value = 2;
+
+            // Set up gain envelope
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + 0.05);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.5, now + 0.2);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+            // Connect and start
+            osc1.connect(filter);
+            osc2.connect(filter);
+            osc3.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc1.start(now);
+            osc2.start(now);
+            osc3.start(now);
+            osc1.stop(now + 0.4);
+            osc2.stop(now + 0.4);
+            osc3.stop(now + 0.4);
+        }
+
+        playChoir(frequency, volume) {
+            // Create a choir-like pad sound
+            const osc1 = this.audioContext.createOscillator();
+            const osc2 = this.audioContext.createOscillator();
+            const osc3 = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillators for choir sound
+            osc1.type = 'sine';
+            osc1.frequency.value = frequency;
+
+            osc2.type = 'sine';
+            osc2.frequency.value = frequency * 1.003; // Slight detuning for chorus effect
+
+            osc3.type = 'sine';
+            osc3.frequency.value = frequency * 0.997; // Slight detuning in other direction
+
+            // Set up filter
+            filter.type = 'lowpass';
+            filter.frequency.value = 2000;
+            filter.Q.value = 1;
+
+            // Set up gain envelope for pad sound
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.5, now + 0.1); // Slow attack
+            gainNode.gain.linearRampToValueAtTime(volume * 0.4, now + 0.3);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8); // Long release
+
+            // Connect and start
+            osc1.connect(filter);
+            osc2.connect(filter);
+            osc3.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            osc1.start(now);
+            osc2.start(now);
+            osc3.start(now);
+            osc1.stop(now + 0.8);
+            osc2.stop(now + 0.8);
+            osc3.stop(now + 0.8);
+        }
+
+        playDaftPunkSynth(frequency, volume) {
+            // Create a Daft Punk-esque synth sound with more authentic processing
+            const osc1 = this.audioContext.createOscillator();
+            const osc2 = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const lowpassFilter = this.audioContext.createBiquadFilter();
+            const distortion = this.createDistortionEffect(20); // Subtle distortion
+            const now = this.audioContext.currentTime;
+
+            // Set up oscillators
+            osc1.type = 'sawtooth';
+            osc1.frequency.value = frequency;
+
+            osc2.type = 'square';
+            osc2.frequency.value = frequency * 1.005; // Slight detuning for thickness
+
+            // Add a third oscillator for sub-bass (one octave lower)
+            const subOsc = this.audioContext.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.frequency.value = frequency / 2;
+            const subGain = this.audioContext.createGain();
+            subGain.gain.value = volume * 0.5;
+
+            // Set up more dramatic filter envelope (classic Daft Punk filter sweep)
+            lowpassFilter.type = 'lowpass';
+            lowpassFilter.frequency.setValueAtTime(200, now); // Start with closed filter
+            lowpassFilter.frequency.exponentialRampToValueAtTime(1500, now + 0.1); // Quick opening
+            lowpassFilter.frequency.exponentialRampToValueAtTime(800, now + 0.3); // Slow closing
+            lowpassFilter.Q.value = 12; // More resonance for that Daft Punk sound
+
+            // Set up gain envelope with slight pumping effect
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.8, now + 0.01);
+            gainNode.gain.setValueAtTime(volume * 0.8, now + 0.1);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.6, now + 0.15); // Slight dip
+            gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + 0.2); // Rise again
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.4); // Longer release
+
+            // Connect everything
+            osc1.connect(distortion);
+            osc2.connect(distortion);
+            subOsc.connect(subGain);
+            distortion.connect(lowpassFilter);
+            subGain.connect(lowpassFilter);
+            lowpassFilter.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
 
-            // Start and stop the oscillator
-            oscillator.start();
+            // Start and stop oscillators
+            osc1.start(now);
+            osc2.start(now);
+            subOsc.start(now);
+            osc1.stop(now + 0.4);
+            osc2.stop(now + 0.4);
+            subOsc.stop(now + 0.4);
+        }
 
-            // Envelope for smoother sound
-            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
-            gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
+        createDistortionEffect(amount) {
+            // Create a waveshaper distortion effect
+            const distortion = this.audioContext.createWaveShaper();
 
-            // Stop after a short duration
-            oscillator.stop(this.audioContext.currentTime + 0.3);
+            // Create the distortion curve
+            const k = typeof amount === 'number' ? amount : 50;
+            const samples = 44100;
+            const curve = new Float32Array(samples);
+            const deg = Math.PI / 180;
+
+            for (let i = 0; i < samples; ++i) {
+                const x = i * 2 / samples - 1;
+                // Distortion formula
+                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            }
+
+            distortion.curve = curve;
+            distortion.oversample = '4x';
+
+            return distortion;
+        }
+
+        createNoiseNode(duration) {
+            // Create a buffer of white noise
+            const bufferSize = this.audioContext.sampleRate * duration;
+            const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            // Create audio buffer source node
+            const noise = this.audioContext.createBufferSource();
+            noise.buffer = buffer;
+            noise.start();
+
+            return noise;
         }
 
         countAliveCellsInSquare(row, col) {
             if (!this.gameState) return 0;
 
             let count = 0;
-            const startX = col * this.soundSquareSize;
-            const startY = row * this.soundSquareSize;
-            const endX = startX + this.soundSquareSize;
-            const endY = startY + this.soundSquareSize;
+            const startX = col * this.soundSquareWidth;
+            const startY = row * this.soundSquareHeight;
+            const endX = startX + this.soundSquareWidth;
+            const endY = startY + this.soundSquareHeight;
 
             // Convert pixel coordinates to grid coordinates
             const gridStartX = Math.floor(startX / this.cellSize);
@@ -819,13 +1240,13 @@
         }
 
         drawSoundGrid() {
-            // Draw the 4x4 grid for sound visualization
+            // Draw the 8x16 grid for sound visualization
             this.ctx.strokeStyle = 'rgba(0, 122, 204, 0.5)'; // Semi-transparent blue
             this.ctx.lineWidth = 2;
 
             // Draw horizontal lines
-            for (let i = 1; i < this.soundGrid; i++) {
-                const y = i * this.soundSquareSize;
+            for (let i = 1; i < this.soundGridRows; i++) {
+                const y = i * this.soundSquareHeight;
                 this.ctx.beginPath();
                 this.ctx.moveTo(0, y);
                 this.ctx.lineTo(this.canvasSize, y);
@@ -833,47 +1254,97 @@
             }
 
             // Draw vertical lines
-            for (let i = 1; i < this.soundGrid; i++) {
-                const x = i * this.soundSquareSize;
+            for (let i = 1; i < this.soundGridCols; i++) {
+                const x = i * this.soundSquareWidth;
                 this.ctx.beginPath();
                 this.ctx.moveTo(x, 0);
                 this.ctx.lineTo(x, this.canvasSize);
                 this.ctx.stroke();
             }
 
-            // Highlight the current beat squares
-            if (this.isPlaying) {
-                const square1 = this.currentBeat;
-                const square2 = this.currentBeat + 8;
+            // Draw instrument names on the left side
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'middle';
 
-                this.highlightSoundSquare(square1);
-                this.highlightSoundSquare(square2);
+            // for (let row = 0; row < this.soundGridRows; row++) {
+            //     const y = row * this.soundSquareHeight + this.soundSquareHeight / 2;
+            //     // Capitalize first letter of instrument name
+            //     const instrumentName = this.instruments[row].charAt(0).toUpperCase() + this.instruments[row].slice(1);
+            //     this.ctx.fillText(instrumentName, 5, y);
+            // }
+
+            // Highlight the current beat column
+            if (this.isPlaying) {
+                this.highlightBeatColumn(this.currentBeat);
+            }
+
+            // Draw grid cells with active notes
+            for (let row = 0; row < this.soundGridRows; row++) {
+                for (let col = 0; col < this.soundGridCols; col++) {
+                    // Count alive cells in this square
+                    const aliveCells = this.countAliveCellsInSquare(row, col);
+                    if (aliveCells > 0) {
+                        // Draw a semi-transparent highlight for active cells
+                        const intensity = Math.min(0.6, 0.1 + (aliveCells / 100) * 0.5);
+                        this.ctx.fillStyle = `rgba(0, 255, 0, ${intensity})`; // Green with variable opacity
+                        const x = col * this.soundSquareWidth;
+                        const y = row * this.soundSquareHeight;
+                        this.ctx.fillRect(x, y, this.soundSquareWidth, this.soundSquareHeight);
+                    }
+                }
             }
         }
 
-        highlightSoundSquare(squareIndex) {
-            if (squareIndex >= 16) return;
+        highlightBeatColumn(col) {
+            if (col >= this.soundGridCols) return;
 
-            const row = Math.floor(squareIndex / 4);
-            const col = squareIndex % 4;
+            const x = col * this.soundSquareWidth;
 
-            const x = col * this.soundSquareSize;
-            const y = row * this.soundSquareSize;
+            // Draw a semi-transparent highlight for the entire column
+            this.ctx.fillStyle = 'rgba(0, 122, 204, 0.3)'; // Light blue
+            this.ctx.fillRect(x, 0, this.soundSquareWidth, this.canvasSize);
 
-            // Draw a semi-transparent highlight
-            this.ctx.fillStyle = 'rgba(0, 122, 204, 0.2)'; // Very light blue
-            this.ctx.fillRect(x, y, this.soundSquareSize, this.soundSquareSize);
+            // Draw beat number at the top
+            // this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Almost white
+            // this.ctx.font = '12px Arial';
+            // this.ctx.textAlign = 'center';
+            // this.ctx.textBaseline = 'top';
+            // this.ctx.fillText(
+            //     (col + 1).toString(),
+            //     x + this.soundSquareWidth / 2,
+            //     5
+            // );
 
-            // Draw the note name in the square
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
-            this.ctx.font = '16px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(
-                this.notes[squareIndex], 
-                x + this.soundSquareSize / 2, 
-                y + this.soundSquareSize / 2
-            );
+            // Highlight each active cell in the column
+            for (let row = 0; row < this.soundGridRows; row++) {
+                // Count alive cells in this square
+                const aliveCells = this.countAliveCellsInSquare(row, col);
+                if (aliveCells > 0) {
+                    const y = row * this.soundSquareHeight;
+
+                    // Draw a brighter highlight for active cells in the current column
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.2)'; // Yellow highlight
+                    this.ctx.fillRect(x, y, this.soundSquareWidth, this.soundSquareHeight);
+
+                    // // Draw the note name in the square
+                    // this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Almost white
+                    // this.ctx.font = '10px Arial';
+                    // this.ctx.textAlign = 'center';
+                    // this.ctx.textBaseline = 'middle';
+
+                    // // Get the note for this instrument and column
+                    // const instrument = this.instruments[row];
+                    // const note = this.notes[instrument][col];
+                    //
+                    // this.ctx.fillText(
+                    //     note,
+                    //     x + this.soundSquareWidth / 2,
+                    //     y + this.soundSquareHeight / 2
+                    // );
+                }
+            }
         }
 
         updateUI() {
