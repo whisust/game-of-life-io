@@ -3,7 +3,7 @@
 <head>
     <title>Game of Life Multiplayer</title>
     <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -62,7 +62,6 @@
             /*    justify-content: center;*/
             /*    margin-bottom: 10px;*/
             /*}*/
-
             .instructions {
                 padding: 10px;
                 margin: 10px auto;
@@ -113,7 +112,7 @@
             padding: 10px;
             background-color: white;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         #status {
@@ -126,7 +125,7 @@
             padding: 15px;
             background-color: white;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .instructions h3 {
@@ -187,9 +186,12 @@
     <div class="orientation-controls">
         <label>Orientation:</label>
         <button class="orientation-btn" onclick="selectOrientation('up')" id="orientUp" title="Raccourci: ↑">⬆️</button>
-        <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️</button>
-        <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️</button>
-        <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️</button>
+        <button class="orientation-btn" onclick="selectOrientation('right')" id="orientRight" title="Raccourci: →">➡️
+        </button>
+        <button class="orientation-btn" onclick="selectOrientation('down')" id="orientDown" title="Raccourci: ↓">⬇️
+        </button>
+        <button class="orientation-btn" onclick="selectOrientation('left')" id="orientLeft" title="Raccourci: ←">⬅️
+        </button>
     </div>
     <div class="grid-size-controls admin-controls">
         <label>Grille:</label>
@@ -333,7 +335,7 @@
                 soundToggle.onclick = () => this.toggleSound();
 
                 // Add the button to the controls
-                const controls = document.querySelector('.controls');
+                const controls = document.querySelector('.admin-controls');
                 controls.appendChild(soundToggle);
 
                 // Add style for the sound toggle button
@@ -442,7 +444,7 @@
             // Get the note for this instrument and column
             const note = this.notes[instrument][col];
 
-            if(note) {
+            if (note) {
                 // Calculate frequency based on the note
                 const frequency = this.noteToFrequency(note);
 
@@ -1453,7 +1455,7 @@
     document.addEventListener('keydown', (e) => {
         if (!window.gameClient) return;
 
-        switch(e.key) {
+        switch (e.key) {
             // Pattern selection
             case '1':
                 selectPattern('glider');
