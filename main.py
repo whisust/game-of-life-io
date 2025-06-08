@@ -44,7 +44,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "player": {
                     "id": player.id,
                     "name": player.name,
-                    "is_admin": player.is_admin,
+                    "is_admin": True or player.is_admin, # everybody is admin now
                 },
                 "message": f"Bienvenue {player_name}!",
                 "grid_size": server_state.grid_size
