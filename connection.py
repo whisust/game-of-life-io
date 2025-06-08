@@ -23,7 +23,7 @@ class ConnectionManager:
     def add_player(self, websocket: WebSocket, name: str) -> str:
         player_id = str(uuid.uuid4())
         color = len(self.players) % 10 + 1  # Couleurs 1-10
-        is_admin = name == CONFIG['ADMIN_NAME']
+        is_admin = True #name == CONFIG['ADMIN_NAME']
         self.players[player_id] = Player(player_id, name, color, is_admin=is_admin)
         logger.info(f"Nouveau joueur connecté: {name} (ID: {player_id[:8]}...) - {'Admin' if is_admin else 'User'} - Total: {len(self.players)} joueurs")
         return player_id
